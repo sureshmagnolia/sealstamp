@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Official Seal &amp; Stamp Studio - High Resolution Generator</title>
+  <meta name="description" content="Generate high-resolution digital and printable seal stamps with custom logo upload, typography, color, ink bleed, and transparent PNG/SVG export.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=EB+Garamond:ital,wght@0,500;0,600;0,700;0,800;1,600&family=Inter:wght@300;400;500;600;700;800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,500;0,600;0,700;1,600&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400;1,700&family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #0b2b5e;
+      --primary-light: #1b4b9b;
+      --accent: #2563eb;
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --border-color: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --panel-bg: rgba(30, 41, 59, 0.85);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #090d16;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation Header */
+    header {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #0b2b5e, #2563eb);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .brand-text h1 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .brand-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Main Workspace Layout */
+    .app-workspace {
+      display: grid;
+      grid-template-columns: 430px 1fr;
+      flex: 1;
+      height: calc(100vh - 65px);
+      overflow: hidden;
+    }
+
+    @media (max-width: 1024px) {
+      .app-workspace {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+      }
+    }
+
+    /* Left Control Sidebar */
+    .sidebar {
+      background: var(--bg-dark);
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #60a5fa;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-group {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .input-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .input-field label span.val {
+      color: #93c5fd;
+      font-family: monospace;
+    }
+
+    input[type="text"], select {
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #fff;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    input[type="text"]:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    }
+
+    /* Logo Upload Dropzone */
+    .logo-uploader-box {
+      border: 2px dashed #475569;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      background: rgba(15, 23, 42, 0.6);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+
+    .logo-uploader-box:hover, .logo-uploader-box.dragover {
+      border-color: var(--accent);
+      background: rgba(37, 99, 235, 0.08);
+    }
+
+    .logo-thumb-preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #090d16;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .logo-thumb-img {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: contain;
+      background: #1e293b;
+      border: 1px solid #334155;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #334155;
+      transition: .2s;
+      border-radius: 22px;
+    }
+
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-toggle {
+      background-color: var(--accent);
+    }
+
+    input:checked + .slider-toggle:before {
+      transform: translateX(18px);
+    }
+
+    /* Color Swatches */
+    .color-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .color-swatch {
+      height: 36px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.05);
+    }
+
+    .color-swatch.active {
+      border-color: #ffffff;
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    /* Range Sliders */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 3px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(37, 99, 235, 0.5);
+    }
+
+    /* Right Canvas / Preview Area */
+    .preview-viewport {
+      background: #0b1120;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .preview-toolbar {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      z-index: 10;
+    }
+
+    .tabs {
+      display: flex;
+      background: #090d16;
+      border-radius: 8px;
+      padding: 3px;
+      border: 1px solid var(--border-color);
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: var(--bg-card);
+      color: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .preview-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      padding: 40px;
+      position: relative;
+    }
+
+    /* Backdrop Styles */
+    .bg-transparent {
+      background-image: 
+        linear-gradient(45deg, #1e293b 25%, transparent 25%), 
+        linear-gradient(-45deg, #1e293b 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #1e293b 75%), 
+        linear-gradient(-45deg, transparent 75%, #1e293b 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      background-color: #0f172a;
+    }
+
+    .bg-parchment {
+      background: radial-gradient(circle at center, #fdfbf7 0%, #f3ebdb 100%);
+    }
+
+    .bg-white {
+      background: #f8fafc;
+    }
+
+    .bg-document {
+      background: #cbd5e1;
+    }
+
+    /* Stamp Display Container */
+    .stamp-container-box {
+      padding: 30px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .stamp-container-box.parchment-sheet {
+      background: #fcf9f2;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
+      border-radius: 6px;
+    }
+
+    .stamp-container-box.white-sheet {
+      background: #ffffff;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
+      border-radius: 6px;
+    }
+
+    /* DOCUMENT SIMULATOR */
+    .document-mockup {
+      width: 640px;
+      min-height: 720px;
+      background: #ffffff;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+      padding: 50px;
+      color: #1e293b;
+      position: relative;
+      border-radius: 4px;
+      font-family: 'Times New Roman', serif;
+      user-select: none;
+    }
+
+    .doc-header {
+      text-align: center;
+      border-bottom: 2px solid #0b2b5e;
+      padding-bottom: 15px;
+      margin-bottom: 25px;
+    }
+
+    .doc-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #0b2b5e;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .doc-sub {
+      font-size: 13px;
+      color: #475569;
+      margin-top: 4px;
+    }
+
+    .doc-body {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #334155;
+      margin-bottom: 50px;
+    }
+
+    .doc-sign-zone {
+      margin-top: 40px;
+      display: flex;
+      justify-content: flex-end;
+      position: relative;
+    }
+
+    .doc-sign-box {
+      border-top: 1px dashed #94a3b8;
+      width: 340px;
+      padding-top: 10px;
+      text-align: center;
+      position: relative;
+    }
+
+    /* THE CORE STAMP ELEMENT */
+    .live-stamp {
+      display: inline-flex;
+      align-items: center;
+      user-select: none;
+      position: relative;
+      transform-origin: center center;
+      transition: filter 0.2s ease;
+    }
+
+    .live-stamp.textured {
+      filter: drop-shadow(0 0 0.4px currentColor) contrast(110%);
+    }
+
+    .stamp-logo-canvas-wrap {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stamp-logo-canvas-wrap canvas {
+      display: block;
+    }
+
+    .stamp-text-block {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: left;
+    }
+
+    /* Shape masks for logo */
+    .logo-shape-circle { border-radius: 50%; }
+    .logo-shape-rounded { border-radius: 16%; }
+    .logo-shape-none { border-radius: 0; }
+
+    /* Border styles */
+    .border-none { border: none; }
+    .border-solid-thin { border: 2px solid currentColor; padding: 12px 18px; border-radius: 4px; }
+    .border-solid-thick { border: 3.5px solid currentColor; padding: 14px 20px; border-radius: 6px; }
+    .border-rounded { border: 2.5px solid currentColor; padding: 14px 20px; border-radius: 16px; }
+    .border-double { border: 4px double currentColor; padding: 14px 20px; border-radius: 6px; }
+    .border-dashed { border: 2.5px dashed currentColor; padding: 14px 20px; border-radius: 8px; }
+
+    /* Buttons & Controls */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #1e293b;
+      border-color: var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #059669, #047857);
+      color: #fff;
+    }
+    .btn-success:hover {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 11px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal-card {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      max-width: 650px;
+      width: 100%;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 {
+      font-size: 18px;
+      color: #fff;
+    }
+    .code-box {
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px;
+      color: #38bdf8;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #059669;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      z-index: 300;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Print Styles Optimization */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      header, .sidebar, .preview-toolbar, .modal-overlay, .toast, .brand {
+        display: none !important;
+      }
+      .app-workspace {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      .preview-viewport {
+        background: transparent !important;
+        overflow: visible !important;
+      }
+      .preview-stage {
+        padding: 40px !important;
+        background: transparent !important;
+      }
+      .stamp-container-box {
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .live-stamp {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .document-mockup {
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>Official Seal Stamp Studio</h1>
+        <p>Govt. College Chittur &bull; Custom Logo &bull; High-Resolution Vector &amp; Canvas Generator</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <a href="stamp.html" class="btn btn-secondary" target="_blank" title="Open Clean HTML View">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        Clean View
+      </a>
+      <button class="btn btn-secondary" onclick="printStamp()" title="Print Stamp at 1:1 Scale">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+        Print Stamp
+      </button>
+      <button class="btn btn-secondary" onclick="openCodeModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        Get HTML/CSS
+      </button>
+      <button class="btn btn-primary" onclick="copyStampImage()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+        Copy Stamp (PNG)
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="app-workspace">
+    
+    <!-- LEFT SIDEBAR: CONTROLS -->
+    <aside class="sidebar">
+      
+      <!-- LOGO SELECTION & UPLOAD SECTION -->
+      <div>
+        <div class="section-title">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Logo &amp; Emblem Selection
+        </div>
+        <div class="control-group">
+          
+          <!-- Dropzone for custom logo -->
+          <div class="logo-uploader-box" id="dropzone" onclick="document.getElementById('logoFileInput').click()">
+            <input type="file" id="logoFileInput" accept="image/png, image/jpeg, image/svg+xml, image/webp" style="display:none;">
+            <svg width="28" height="28" fill="none" stroke="#60a5fa" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            <div style="font-size:12px; font-weight:600; color:#fff;">Click or Drag &amp; Drop Custom Logo</div>
+            <div style="font-size:11px; color:var(--text-muted);">PNG, JPG, SVG, WebP supported</div>
+          </div>
+
+          <!-- Active Logo Status & Reset -->
+          <div class="logo-thumb-preview" id="logoPreviewRow">
+            <img id="activeLogoThumb" class="logo-thumb-img" src="GCC_Logo_transparent.png" alt="Active Logo">
+            <div style="flex:1; overflow:hidden;">
+              <div id="activeLogoTitle" style="font-size:12px; font-weight:600; color:#fff; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">Govt. College Chittur HD Emblem</div>
+              <div id="activeLogoSub" style="font-size:11px; color:#60a5fa;">Default Built-in Emblem</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btnResetLogo" onclick="resetToDefaultLogo()" title="Reset to default GCC Emblem" style="display:none;">Reset</button>
+          </div>
+
+          <!-- Logo Auto-Tint / Color mode -->
+          <div class="toggle-row">
+            <span>Auto-Tint with Stamp Ink</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="chkAutoTint" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <!-- Logo Background Removal Threshold -->
+          <div class="input-field" id="bgRemovalField">
+            <label>Auto Background Clean Threshold: <span class="val" id="bgThreshVal">240</span></label>
+            <input type="range" id="bgThreshold" min="150" max="255" value="240">
+          </div>
+
+          <!-- Logo Shape Mask -->
+          <div class="input-field">
+            <label>Logo Shape Mask</label>
+            <select id="logoShapeSelect">
+              <option value="logo-shape-circle">Circular Crop (Standard Seal)</option>
+              <option value="logo-shape-rounded">Rounded Rectangle</option>
+              <option value="logo-shape-none">Natural / Uncropped</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Text Configuration -->
+      <div>
+        <div class="section-title">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          Stamp Information
+        </div>
+        <div class="control-group">
+          <div class="input-field">
+            <label>Line 1: Full Name &amp; Title</label>
+            <input type="text" id="inputName" value="Prof. (Dr.) Suresh V.">
+          </div>
+          <div class="input-field">
+            <label>Line 2: PEN / Employee ID</label>
+            <input type="text" id="inputPen" value="PEN Number: 656830">
+          </div>
+          <div class="input-field">
+            <label>Line 3: Designation &amp; Department</label>
+            <input type="text" id="inputDesig" value="Professor, Dept. of Botany">
+          </div>
+          <div class="input-field">
+            <label>Line 4: Institution / College</label>
+            <input type="text" id="inputCollege" value="Govt. College, Chittur,">
+          </div>
+          <div class="input-field">
+            <label>Line 5: Location &amp; PIN Code</label>
+            <input type="text" id="inputLocation" value="Palakkad - 678104">
+          </div>
+        </div>
+      </div>
+
+      <!-- Ink Color Preset -->
+      <div>
+        <div class="section-title">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4 4 4 0 014-4h1a4 4 0 014 4 4 4 0 01-4 4H7zm0 0v-4m0 4l3-3m-3 3l-3-3m14-8a4 4 0 00-4-4 4 4 0 00-4 4v1a4 4 0 004 4 4 4 0 004-4V7zm0 0h-4m4 0l-3-3m3 3l-3 3"/></svg>
+          Ink Color Engine
+        </div>
+        <div class="control-group">
+          <div class="color-presets">
+            <button class="color-swatch active" style="background:#0b2b5e; color:#fff;" data-color="#0b2b5e" title="Official Stamp Navy">Navy</button>
+            <button class="color-swatch" style="background:#003399; color:#fff;" data-color="#003399" title="Royal Blue">Royal</button>
+            <button class="color-swatch" style="background:#4a148c; color:#fff;" data-color="#4a148c" title="Violet / Stamp Purple">Violet</button>
+            <button class="color-swatch" style="background:#b71c1c; color:#fff;" data-color="#b71c1c" title="Official Red">Red</button>
+            <button class="color-swatch" style="background:#1b5e20; color:#fff;" data-color="#1b5e20" title="Emerald Green">Green</button>
+            <button class="color-swatch" style="background:#111827; color:#fff;" data-color="#111827" title="Document Black">Black</button>
+            <button class="color-swatch" style="background:#831843; color:#fff;" data-color="#831843" title="Deep Maroon">Maroon</button>
+            <div style="display:flex;align-items:center;justify-content:center;background:#090d16;border-radius:8px;border:1px solid #334155;">
+              <input type="color" id="customColorPicker" value="#0b2b5e" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;">
+            </div>
+          </div>
+          <div class="input-field">
+            <label>Selected HEX: <span class="val" id="hexVal">#0b2b5e</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typography & Proportions -->
+      <div>
+        <div class="section-title">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+          Typography &amp; Layout
+        </div>
+        <div class="control-group">
+          <div class="input-field">
+            <label>Font Family</label>
+            <select id="fontSelect">
+              <option value="'Merriweather', Georgia, serif">Merriweather (Bold Serif - Recommended)</option>
+              <option value="'PT Serif', Georgia, serif">PT Serif (Official Govt. Standard)</option>
+              <option value="'Libre Baskerville', serif">Libre Baskerville (Academic Classic)</option>
+              <option value="'Lora', Georgia, serif">Lora (Elegant Clean)</option>
+              <option value="'EB Garamond', serif">EB Garamond (Traditional Stately)</option>
+              <option value="'Cinzel', serif">Cinzel (Formal Capital Style)</option>
+              <option value="'Times New Roman', Times, serif">Times New Roman (Standard)</option>
+            </select>
+          </div>
+
+          <div class="input-field">
+            <label>Line 1 Size: <span class="val" id="nameSizeVal">32px</span></label>
+            <input type="range" id="nameSize" min="24" max="44" value="32">
+          </div>
+
+          <div class="input-field">
+            <label>Body Text Size: <span class="val" id="bodySizeVal">23px</span></label>
+            <input type="range" id="bodySize" min="16" max="32" value="23">
+          </div>
+
+          <div class="input-field">
+            <label>Logo Size: <span class="val" id="logoSizeVal">150px</span></label>
+            <input type="range" id="logoSize" min="100" max="220" value="150">
+          </div>
+
+          <div class="input-field">
+            <label>Logo / Text Gap: <span class="val" id="gapVal">28px</span></label>
+            <input type="range" id="stampGap" min="10" max="60" value="28">
+          </div>
+        </div>
+      </div>
+
+      <!-- Stamp Effects & Frame -->
+      <div>
+        <div class="section-title">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+          Ink Bleed &amp; Border Frame
+        </div>
+        <div class="control-group">
+          <div class="input-field">
+            <label>Stamp Frame / Border</label>
+            <select id="borderSelect">
+              <option value="border-none">Borderless (Frameless - Original)</option>
+              <option value="border-solid-thin">Clean Thin Box</option>
+              <option value="border-solid-thick">Solid Official Box</option>
+              <option value="border-rounded">Rounded Rectangle Frame</option>
+              <option value="border-double">Double Line Legal Border</option>
+              <option value="border-dashed">Classic Dashed Stamp Box</option>
+            </select>
+          </div>
+
+          <div class="input-field">
+            <label>Stamp Tilt Angle: <span class="val" id="tiltVal">0°</span></label>
+            <input type="range" id="stampTilt" min="-20" max="20" value="0">
+          </div>
+
+          <div class="input-field">
+            <label>Ink Texture Bleed: <span class="val" id="bleedVal">Crisp Digital</span></label>
+            <input type="range" id="inkBleed" min="0" max="100" value="0">
+          </div>
+
+          <div class="input-field">
+            <label>Ink Opacity: <span class="val" id="opacityVal">100%</span></label>
+            <input type="range" id="inkOpacity" min="70" max="100" value="100">
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT MAIN: PREVIEW & EXPORT -->
+    <main class="preview-viewport">
+      
+      <!-- Preview Header Toolbar -->
+      <div class="preview-toolbar">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="setBackdrop('transparent')">Transparent</button>
+          <button class="tab-btn" onclick="setBackdrop('parchment')">Parchment</button>
+          <button class="tab-btn" onclick="setBackdrop('white')">White Sheet</button>
+          <button class="tab-btn" onclick="setBackdrop('document')">Document Simulator</button>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="exportDpi" style="padding: 7px 10px; font-size: 12px;">
+            <option value="4">High-Res 300 DPI (Print Ready)</option>
+            <option value="8">Ultra-HD 600 DPI (Master Vector/4K)</option>
+            <option value="2">2x Retina Display</option>
+            <option value="1">1x Standard Web</option>
+          </select>
+          
+          <button class="btn btn-success" onclick="downloadPNG(true)">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download Transparent PNG
+          </button>
+
+          <button class="btn btn-secondary" onclick="downloadSVG()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            SVG
+          </button>
+
+          <button class="btn btn-secondary" onclick="printStamp()" title="Print Stamp at 1:1 Scale">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            Print
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview Canvas / Stage -->
+      <div class="preview-stage bg-transparent" id="previewStage">
+        
+        <!-- Standard Stamp Container -->
+        <div class="stamp-container-box" id="stampBox">
+          <div class="live-stamp border-none" id="stampElement">
+            <div class="stamp-logo-canvas-wrap" id="logoWrap">
+              <canvas id="logoTintCanvas" width="300" height="300" style="width: 150px; height: 150px;"></canvas>
+            </div>
+            <div class="stamp-text-block" id="stampTextBlock">
+              <div class="stamp-name-line" id="dispName" style="font-size: 32px; font-weight: 900; line-height: 1.25; margin-bottom: 5px;">Prof. (Dr.) Suresh V.</div>
+              <div class="stamp-pen-line" id="dispPen" style="font-size: 23px; font-weight: 700; line-height: 1.35; margin-bottom: 2px;">PEN Number: 656830</div>
+              <div class="stamp-desig-line" id="dispDesig" style="font-size: 23px; font-weight: 700; line-height: 1.35; margin-bottom: 2px;">Professor, Dept. of Botany</div>
+              <div class="stamp-college-line" id="dispCollege" style="font-size: 23px; font-weight: 700; line-height: 1.35; margin-bottom: 2px;">Govt. College, Chittur,</div>
+              <div class="stamp-loc-line" id="dispLocation" style="font-size: 23px; font-weight: 700; line-height: 1.35;">Palakkad - 678104</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Document Simulator Mockup (Hidden by default, shown in document view) -->
+        <div class="document-mockup" id="documentMockup" style="display: none;">
+          <div class="doc-header">
+            <div class="doc-title" id="docHeadTitle">GOVERNMENT COLLEGE CHITTUR</div>
+            <div class="doc-sub" id="docHeadSub">DEPARTMENT OF BOTANY &bull; PALAKKAD, KERALA - 678104</div>
+          </div>
+          <div class="doc-body">
+            <p><strong>Ref: GCC/BOT/2026/CERT-849</strong> <span style="float: right;">Date: 18 August 2026</span></p>
+            <br>
+            <p style="text-align: center; font-size: 16px; font-weight: bold; text-decoration: underline;">TO WHOMSOEVER IT MAY CONCERN</p>
+            <br>
+            <p>This is to officially certify the authenticity and verification of academic research specimen records and institutional documentation under the authorized department.</p>
+            <p>All administrative and academic endorsements are executed under authorized seal and signature as provided below.</p>
+          </div>
+          <div class="doc-sign-zone">
+            <div class="doc-sign-box" id="docSignTarget">
+              <p style="font-size: 12px; color: #64748b; margin-bottom: 8px;">Authorized Signatory &amp; Seal</p>
+              <!-- Stamp clone inserted dynamically -->
+              <div id="simulatedStampSlot"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- HTML/CSS Code Export Modal -->
+  <div class="modal-overlay" id="codeModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Embeddable Stamp HTML &amp; CSS</h3>
+        <button class="btn btn-secondary" onclick="closeCodeModal()" style="padding: 4px 8px;">&times;</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted);">
+        Copy and paste this clean, self-contained HTML component into any website, signature block, or web document.
+      </p>
+      <div class="code-box" id="htmlCodeOutput"></div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn btn-secondary" onclick="closeCodeModal()">Close</button>
+        <button class="btn btn-primary" onclick="copySnippetCode()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+          Copy Snippet
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toastMsg">
+    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <span id="toastText">Action successful</span>
+  </div>
+
+  <!-- Hidden Master Canvas for High-Res 300/600 DPI Export -->
+  <canvas id="exportCanvas" style="display: none;"></canvas>
+
+  <script src="logo_data.js"></script>
+  <script>
+    // State
+    const state = {
+      name: "Prof. (Dr.) Suresh V.",
+      pen: "PEN Number: 656830",
+      desig: "Professor, Dept. of Botany",
+      college: "Govt. College, Chittur,",
+      location: "Palakkad - 678104",
+      color: "#0b2b5e",
+      font: "'Merriweather', Georgia, serif",
+      nameSize: 32,
+      bodySize: 23,
+      logoSize: 150,
+      gap: 28,
+      border: "border-none",
+      tilt: 0,
+      bleed: 0,
+      opacity: 1.0,
+      backdrop: "transparent",
+      // Logo custom states
+      isCustomLogo: false,
+      logoShape: "logo-shape-circle",
+      autoTint: true,
+      bgThreshold: 240,
+      customLogoSrc: null,
+      customLogoFileName: "Custom Logo"
+    };
+
+    let defaultLogoMaskImg = new Image();
+    let currentRawLogoImg = new Image();
+    let currentProcessedMaskCanvas = document.createElement('canvas');
+    let logoLoaded = false;
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      // Load Default Mask Logo
+      if (typeof LOGO_MASK_BASE64 !== 'undefined' && LOGO_MASK_BASE64) {
+        defaultLogoMaskImg.src = LOGO_MASK_BASE64;
+      } else {
+        defaultLogoMaskImg.src = 'GCC_Logo_mask.png';
+      }
+
+      defaultLogoMaskImg.onload = () => {
+        currentRawLogoImg = defaultLogoMaskImg;
+        logoLoaded = true;
+        reprocessLogoMask();
+        updateStamp();
+      };
+
+      setupEventListeners();
+    });
+
+    // Smart background removal and mask generation for any uploaded image
+    function reprocessLogoMask() {
+      if (!logoLoaded || !currentRawLogoImg.complete) return;
+
+      const w = currentRawLogoImg.naturalWidth || currentRawLogoImg.width || 512;
+      const h = currentRawLogoImg.naturalHeight || currentRawLogoImg.height || 512;
+
+      currentProcessedMaskCanvas.width = w;
+      currentProcessedMaskCanvas.height = h;
+      const ctx = currentProcessedMaskCanvas.getContext('2d');
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(currentRawLogoImg, 0, 0, w, h);
+
+      // If auto-tint is enabled, process pixels to convert light backgrounds to transparent alpha
+      if (state.autoTint) {
+        try {
+          const imgData = ctx.getImageData(0, 0, w, h);
+          const d = imgData.data;
+          const thresh = state.bgThreshold;
+
+          for (let i = 0; i < d.length; i += 4) {
+            const r = d[i], g = d[i+1], b = d[i+2], a = d[i+3];
+            
+            // If already fully transparent, skip
+            if (a < 5) continue;
+
+            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+            
+            if (luminance >= thresh) {
+              d[i+3] = 0; // Cut out background
+            } else {
+              // Smooth ink opacity based on darkness
+              const inkRatio = (thresh - luminance) / (thresh - 20);
+              const computedAlpha = Math.min(255, Math.max(0, Math.round(inkRatio * (a / 255) * 255)));
+              d[i] = 255;
+              d[i+1] = 255;
+              d[i+2] = 255;
+              d[i+3] = computedAlpha;
+            }
+          }
+          ctx.putImageData(imgData, 0, 0);
+        } catch (e) {
+          console.warn("Pixel mask extraction bypassed (CORS / Local file)", e);
+        }
+      }
+    }
+
+    // Render Tinted Logo on live canvas
+    function renderLogoTint() {
+      if (!logoLoaded) return;
+      const canvas = document.getElementById('logoTintCanvas');
+      const ctx = canvas.getContext('2d');
+      
+      const size = state.logoSize * 2; // Retina 2x canvas
+      canvas.width = size;
+      canvas.height = size;
+      canvas.style.width = state.logoSize + 'px';
+      canvas.style.height = state.logoSize + 'px';
+
+      ctx.clearRect(0, 0, size, size);
+      ctx.save();
+
+      // Apply shape clipping (e.g. circle or rounded)
+      if (state.logoShape === 'logo-shape-circle') {
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.clip();
+      } else if (state.logoShape === 'logo-shape-rounded') {
+        ctx.beginPath();
+        ctx.roundRect(0, 0, size, size, size * 0.16);
+        ctx.clip();
+      }
+
+      if (state.autoTint) {
+        // Draw mask canvas
+        ctx.drawImage(currentProcessedMaskCanvas, 0, 0, size, size);
+
+        // Tint using source-in
+        ctx.globalCompositeOperation = 'source-in';
+        ctx.fillStyle = state.color;
+        ctx.fillRect(0, 0, size, size);
+        ctx.globalCompositeOperation = 'source-over';
+      } else {
+        // Original color mode
+        ctx.drawImage(currentRawLogoImg, 0, 0, size, size);
+      }
+
+      ctx.restore();
+    }
+
+    // Update entire stamp DOM
+    function updateStamp() {
+      const stamp = document.getElementById('stampElement');
+      const dName = document.getElementById('dispName');
+      const dPen = document.getElementById('dispPen');
+      const dDesig = document.getElementById('dispDesig');
+      const dCollege = document.getElementById('dispCollege');
+      const dLoc = document.getElementById('dispLocation');
+
+      dName.innerText = state.name;
+      dPen.innerText = state.pen;
+      dDesig.innerText = state.desig;
+      dCollege.innerText = state.college;
+      dLoc.innerText = state.location;
+
+      // Sync document header preview
+      const docHeadTitle = document.getElementById('docHeadTitle');
+      const docHeadSub = document.getElementById('docHeadSub');
+      if (docHeadTitle && docHeadSub) {
+        docHeadTitle.innerText = state.college.replace(/,$/, '').toUpperCase() || "OFFICIAL SEAL";
+        docHeadSub.innerText = `${state.desig.toUpperCase()} • ${state.location.toUpperCase()}`;
+      }
+
+      stamp.style.color = state.color;
+      stamp.style.fontFamily = state.font;
+      stamp.style.gap = state.gap + 'px';
+      stamp.style.opacity = state.opacity;
+      stamp.style.transform = `rotate(${state.tilt}deg)`;
+
+      dName.style.fontSize = state.nameSize + 'px';
+      dPen.style.fontSize = state.bodySize + 'px';
+      dDesig.style.fontSize = state.bodySize + 'px';
+      dCollege.style.fontSize = state.bodySize + 'px';
+      dLoc.style.fontSize = state.bodySize + 'px';
+
+      // Update Border class
+      stamp.className = 'live-stamp ' + state.border;
+
+      // Bleed / Texture
+      if (state.bleed > 0) {
+        stamp.classList.add('textured');
+        const blurAmount = (state.bleed / 100) * 0.7;
+        const contrastAmount = 100 + (state.bleed * 0.3);
+        stamp.style.filter = `drop-shadow(0 0 ${blurAmount}px ${state.color}) contrast(${contrastAmount}%)`;
+      } else {
+        stamp.classList.remove('textured');
+        stamp.style.filter = 'none';
+      }
+
+      renderLogoTint();
+
+      // If document mockup is visible, sync clone
+      if (state.backdrop === 'document') {
+        syncDocumentStamp();
+      }
+    }
+
+    function syncDocumentStamp() {
+      const slot = document.getElementById('simulatedStampSlot');
+      slot.innerHTML = '';
+      const clone = document.getElementById('stampElement').cloneNode(true);
+      clone.style.transform = `rotate(${state.tilt - 3}deg) scale(0.85)`;
+      slot.appendChild(clone);
+      // Re-draw canvas on clone
+      const cloneCanvas = clone.querySelector('canvas');
+      if (cloneCanvas) {
+        const ctx = cloneCanvas.getContext('2d');
+        const origCanvas = document.getElementById('logoTintCanvas');
+        ctx.drawImage(origCanvas, 0, 0);
+      }
+    }
+
+    // Handle Custom Logo Upload
+    function handleLogoFileUpload(file) {
+      if (!file || !file.type.match('image.*')) {
+        showToast('Please select a valid image file (PNG, JPG, SVG, WebP)');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const customImg = new Image();
+        customImg.onload = () => {
+          currentRawLogoImg = customImg;
+          state.customLogoSrc = e.target.result;
+          state.customLogoFileName = file.name;
+          state.isCustomLogo = true;
+
+          // Update UI
+          document.getElementById('activeLogoThumb').src = e.target.result;
+          document.getElementById('activeLogoTitle').innerText = file.name;
+          document.getElementById('activeLogoSub').innerText = 'Custom Uploaded Logo';
+          document.getElementById('btnResetLogo').style.display = 'inline-flex';
+
+          reprocessLogoMask();
+          renderLogoTint();
+          updateStamp();
+          showToast('Custom logo applied successfully!');
+        };
+        customImg.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Reset to default GCC emblem
+    function resetToDefaultLogo() {
+      currentRawLogoImg = defaultLogoMaskImg;
+      state.isCustomLogo = false;
+      state.customLogoSrc = null;
+
+      document.getElementById('activeLogoThumb').src = 'GCC_Logo_transparent.png';
+      document.getElementById('activeLogoTitle').innerText = 'Govt. College Chittur HD Emblem';
+      document.getElementById('activeLogoSub').innerText = 'Default Built-in Emblem';
+      document.getElementById('btnResetLogo').style.display = 'none';
+      document.getElementById('logoFileInput').value = '';
+
+      reprocessLogoMask();
+      renderLogoTint();
+      updateStamp();
+      showToast('Reset to default GCC Emblem');
+    }
+
+    // Event Listeners
+    function setupEventListeners() {
+      // Custom logo file input
+      const fileInput = document.getElementById('logoFileInput');
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          handleLogoFileUpload(e.target.files[0]);
+        }
+      });
+
+      // Drag and Drop support
+      const dropzone = document.getElementById('dropzone');
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+      });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          handleLogoFileUpload(e.dataTransfer.files[0]);
+        }
+      });
+
+      // Auto-Tint Toggle
+      document.getElementById('chkAutoTint').addEventListener('change', (e) => {
+        state.autoTint = e.target.checked;
+        document.getElementById('bgRemovalField').style.display = state.autoTint ? 'flex' : 'none';
+        reprocessLogoMask();
+        renderLogoTint();
+        updateStamp();
+      });
+
+      // Background threshold slider
+      setupSlider('bgThreshold', 'bgThreshVal', '', (v) => {
+        state.bgThreshold = v;
+        reprocessLogoMask();
+        renderLogoTint();
+        updateStamp();
+      });
+
+      // Logo shape selector
+      document.getElementById('logoShapeSelect').addEventListener('change', (e) => {
+        state.logoShape = e.target.value;
+        renderLogoTint();
+        updateStamp();
+      });
+
+      // Text Inputs
+      const textInputs = [
+        { id: 'inputName', key: 'name' },
+        { id: 'inputPen', key: 'pen' },
+        { id: 'inputDesig', key: 'desig' },
+        { id: 'inputCollege', key: 'college' },
+        { id: 'inputLocation', key: 'location' }
+      ];
+
+      textInputs.forEach(({ id, key }) => {
+        document.getElementById(id).addEventListener('input', (e) => {
+          state[key] = e.target.value;
+          updateStamp();
+        });
+      });
+
+      // Color Swatches
+      document.querySelectorAll('.color-swatch').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          setColor(btn.dataset.color);
+        });
+      });
+
+      document.getElementById('customColorPicker').addEventListener('input', (e) => {
+        document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('active'));
+        setColor(e.target.value);
+      });
+
+      // Font
+      document.getElementById('fontSelect').addEventListener('change', (e) => {
+        state.font = e.target.value;
+        updateStamp();
+      });
+
+      // Sliders
+      setupSlider('nameSize', 'nameSizeVal', 'px', (v) => { state.nameSize = v; });
+      setupSlider('bodySize', 'bodySizeVal', 'px', (v) => { state.bodySize = v; });
+      setupSlider('logoSize', 'logoSizeVal', 'px', (v) => { state.logoSize = v; });
+      setupSlider('stampGap', 'gapVal', 'px', (v) => { state.gap = v; });
+      setupSlider('stampTilt', 'tiltVal', '°', (v) => { state.tilt = v; });
+      setupSlider('inkOpacity', 'opacityVal', '%', (v) => { state.opacity = v / 100; });
+      setupSlider('inkBleed', 'bleedVal', '', (v) => { 
+        state.bleed = v; 
+        return v === 0 ? 'Crisp Digital' : v < 40 ? 'Light Press' : 'Vintage Ink Bleed';
+      });
+
+      // Border
+      document.getElementById('borderSelect').addEventListener('change', (e) => {
+        state.border = e.target.value;
+        updateStamp();
+      });
+    }
+
+    function setupSlider(sliderId, labelId, unit, setter) {
+      const slider = document.getElementById(sliderId);
+      const label = document.getElementById(labelId);
+      slider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        const textOverride = setter(val);
+        label.innerText = textOverride ? textOverride : (val + unit);
+        updateStamp();
+      });
+    }
+
+    function setColor(hex) {
+      state.color = hex;
+      document.getElementById('hexVal').innerText = hex;
+      document.getElementById('customColorPicker').value = hex;
+      updateStamp();
+    }
+
+    // Backdrop Toggling
+    function setBackdrop(type) {
+      state.backdrop = type;
+      const stage = document.getElementById('previewStage');
+      const box = document.getElementById('stampBox');
+      const doc = document.getElementById('documentMockup');
+      
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      stage.className = 'preview-stage';
+      box.className = 'stamp-container-box';
+
+      if (type === 'transparent') {
+        stage.classList.add('bg-transparent');
+        box.style.display = 'inline-flex';
+        doc.style.display = 'none';
+      } else if (type === 'parchment') {
+        stage.classList.add('bg-parchment');
+        box.classList.add('parchment-sheet');
+        box.style.display = 'inline-flex';
+        doc.style.display = 'none';
+      } else if (type === 'white') {
+        stage.classList.add('bg-white');
+        box.classList.add('white-sheet');
+        box.style.display = 'inline-flex';
+        doc.style.display = 'none';
+      } else if (type === 'document') {
+        stage.classList.add('bg-document');
+        box.style.display = 'none';
+        doc.style.display = 'block';
+        syncDocumentStamp();
+      }
+    }
+
+    // HIGH-RESOLUTION CANVAS EXPORT (300 / 600 DPI)
+    function generateHighResCanvas(scaleMultiplier, transparent = true) {
+      return new Promise((resolve) => {
+        const masterCanvas = document.getElementById('exportCanvas');
+        const ctx = masterCanvas.getContext('2d');
+
+        // Font and layout metrics at base scale
+        const baseLogoSize = state.logoSize;
+        const gap = state.gap;
+        const nameFontSize = state.nameSize;
+        const bodyFontSize = state.bodySize;
+        const fontFamily = state.font;
+
+        // Measure text widths using helper canvas
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.font = `900 ${nameFontSize}px ${fontFamily}`;
+        const nameWidth = tempCtx.measureText(state.name).width;
+
+        tempCtx.font = `700 ${bodyFontSize}px ${fontFamily}`;
+        const penWidth = tempCtx.measureText(state.pen).width;
+        const desigWidth = tempCtx.measureText(state.desig).width;
+        const collegeWidth = tempCtx.measureText(state.college).width;
+        const locWidth = tempCtx.measureText(state.location).width;
+
+        const maxTextWidth = Math.max(nameWidth, penWidth, desigWidth, collegeWidth, locWidth);
+
+        // Calculate dimensions
+        let paddingX = 24;
+        let paddingY = 18;
+        if (state.border !== 'border-none') {
+          paddingX += 16;
+          paddingY += 12;
+        }
+
+        const baseWidth = baseLogoSize + gap + maxTextWidth + (paddingX * 2);
+        const baseHeight = Math.max(baseLogoSize, nameFontSize + (bodyFontSize * 4) + 24) + (paddingY * 2);
+
+        // Apply export scale multiplier
+        const S = scaleMultiplier;
+        masterCanvas.width = Math.ceil(baseWidth * S);
+        masterCanvas.height = Math.ceil(baseHeight * S);
+
+        ctx.clearRect(0, 0, masterCanvas.width, masterCanvas.height);
+
+        // Optional Background
+        if (!transparent) {
+          if (state.backdrop === 'parchment') {
+            ctx.fillStyle = '#fbf7ee';
+          } else {
+            ctx.fillStyle = '#ffffff';
+          }
+          ctx.fillRect(0, 0, masterCanvas.width, masterCanvas.height);
+        }
+
+        ctx.save();
+        ctx.scale(S, S);
+
+        // Optional Tilt
+        if (state.tilt !== 0) {
+          ctx.translate(baseWidth / 2, baseHeight / 2);
+          ctx.rotate((state.tilt * Math.PI) / 180);
+          ctx.translate(-baseWidth / 2, -baseHeight / 2);
+        }
+
+        ctx.globalAlpha = state.opacity;
+
+        // Draw Border if applicable
+        if (state.border !== 'border-none') {
+          ctx.strokeStyle = state.color;
+          const bx = 10, by = 10, bw = baseWidth - 20, bh = baseHeight - 20;
+          if (state.border === 'border-solid-thin') {
+            ctx.lineWidth = 2;
+            ctx.strokeRect(bx, by, bw, bh);
+          } else if (state.border === 'border-solid-thick') {
+            ctx.lineWidth = 3.5;
+            ctx.strokeRect(bx, by, bw, bh);
+          } else if (state.border === 'border-rounded') {
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.roundRect(bx, by, bw, bh, 14);
+            ctx.stroke();
+          } else if (state.border === 'border-double') {
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(bx, by, bw, bh);
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(bx + 4, by + 4, bw - 8, bh - 8);
+          } else if (state.border === 'border-dashed') {
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([8, 5]);
+            ctx.beginPath();
+            ctx.roundRect(bx, by, bw, bh, 8);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+
+        // Draw Logo
+        const logoX = paddingX;
+        const logoY = (baseHeight - baseLogoSize) / 2;
+        const renderLogoW = baseLogoSize * S;
+        const renderLogoH = baseLogoSize * S;
+
+        // Offscreen canvas for high-quality logo tint & clipping
+        const logoOffscreen = document.createElement('canvas');
+        logoOffscreen.width = renderLogoW;
+        logoOffscreen.height = renderLogoH;
+        const lCtx = logoOffscreen.getContext('2d');
+
+        if (state.logoShape === 'logo-shape-circle') {
+          lCtx.beginPath();
+          lCtx.arc(renderLogoW / 2, renderLogoH / 2, renderLogoW / 2, 0, Math.PI * 2);
+          lCtx.clip();
+        } else if (state.logoShape === 'logo-shape-rounded') {
+          lCtx.beginPath();
+          lCtx.roundRect(0, 0, renderLogoW, renderLogoH, renderLogoW * 0.16);
+          lCtx.clip();
+        }
+
+        if (state.autoTint) {
+          lCtx.drawImage(currentProcessedMaskCanvas, 0, 0, renderLogoW, renderLogoH);
+          lCtx.globalCompositeOperation = 'source-in';
+          lCtx.fillStyle = state.color;
+          lCtx.fillRect(0, 0, renderLogoW, renderLogoH);
+        } else {
+          lCtx.drawImage(currentRawLogoImg, 0, 0, renderLogoW, renderLogoH);
+        }
+
+        ctx.drawImage(logoOffscreen, logoX, logoY, baseLogoSize, baseLogoSize);
+
+        // Draw Typography
+        const textX = paddingX + baseLogoSize + gap;
+        let curY = paddingY + (baseHeight - paddingY * 2 - (nameFontSize + (bodyFontSize * 4) + 18)) / 2;
+
+        ctx.fillStyle = state.color;
+        ctx.textBaseline = 'top';
+
+        // Line 1 (Name)
+        ctx.font = `900 ${nameFontSize}px ${fontFamily}`;
+        ctx.fillText(state.name, textX, curY);
+        curY += nameFontSize + 6;
+
+        // Line 2 (PEN)
+        ctx.font = `700 ${bodyFontSize}px ${fontFamily}`;
+        ctx.fillText(state.pen, textX, curY);
+        curY += bodyFontSize + 5;
+
+        // Line 3 (Designation)
+        ctx.fillText(state.desig, textX, curY);
+        curY += bodyFontSize + 5;
+
+        // Line 4 (College)
+        ctx.fillText(state.college, textX, curY);
+        curY += bodyFontSize + 5;
+
+        // Line 5 (Location)
+        ctx.fillText(state.location, textX, curY);
+
+        ctx.restore();
+        resolve(masterCanvas);
+      });
+    }
+
+    // Download PNG
+    async function downloadPNG(transparent = true) {
+      const dpiMultiplier = parseInt(document.getElementById('exportDpi').value) || 4;
+      showToast('Rendering ultra high-resolution stamp...');
+      const canvas = await generateHighResCanvas(dpiMultiplier, transparent);
+      
+      const link = document.createElement('a');
+      link.download = `Stamp_${state.name.replace(/[^a-zA-Z0-9]/g, '_')}_${dpiMultiplier >= 4 ? '300DPI' : 'HD'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('Download complete!');
+    }
+
+    // Download Vector SVG
+    function downloadSVG() {
+      const nameFontSize = state.nameSize;
+      const bodyFontSize = state.bodySize;
+      const baseLogoSize = state.logoSize;
+      const gap = state.gap;
+      const padding = 20;
+      const totalWidth = baseLogoSize + gap + 520 + (padding * 2);
+      const totalHeight = baseLogoSize + (padding * 2);
+
+      const logoHref = state.customLogoSrc || (typeof LOGO_BASE64 !== 'undefined' ? LOGO_BASE64 : 'GCC_Logo_transparent.png');
+
+      const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">
+  <style>
+    .stamp-name { font-family: ${state.font}; font-weight: 900; font-size: ${nameFontSize}px; fill: ${state.color}; }
+    .stamp-body { font-family: ${state.font}; font-weight: 700; font-size: ${bodyFontSize}px; fill: ${state.color}; }
+  </style>
+  <g transform="rotate(${state.tilt}, ${totalWidth/2}, ${totalHeight/2})" opacity="${state.opacity}">
+    <image href="${logoHref}" x="${padding}" y="${padding}" width="${baseLogoSize}" height="${baseLogoSize}"/>
+    <text x="${padding + baseLogoSize + gap}" y="${padding + 34}" class="stamp-name">${state.name}</text>
+    <text x="${padding + baseLogoSize + gap}" y="${padding + 64}" class="stamp-body">${state.pen}</text>
+    <text x="${padding + baseLogoSize + gap}" y="${padding + 92}" class="stamp-body">${state.desig}</text>
+    <text x="${padding + baseLogoSize + gap}" y="${padding + 120}" class="stamp-body">${state.college}</text>
+    <text x="${padding + baseLogoSize + gap}" y="${padding + 148}" class="stamp-body">${state.location}</text>
+  </g>
+</svg>`;
+
+      const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `Stamp_${state.name.replace(/[^a-zA-Z0-9]/g, '_')}.svg`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast('SVG downloaded!');
+    }
+
+    // Copy to Clipboard as Image
+    async function copyStampImage() {
+      try {
+        showToast('Generating clipboard image...');
+        const canvas = await generateHighResCanvas(3, true);
+        canvas.toBlob(async (blob) => {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          showToast('Stamp copied! You can paste directly into Word, Docs, or Mail.');
+        }, 'image/png');
+      } catch (err) {
+        console.error(err);
+        showToast('Direct image copy unsupported in this browser. Use Download instead.');
+      }
+    }
+
+    // Code Modal
+    function openCodeModal() {
+      const modal = document.getElementById('codeModal');
+      const output = document.getElementById('htmlCodeOutput');
+      
+      const logoSrcForCode = state.customLogoSrc ? state.customLogoSrc : 'GCC_Logo_transparent.png';
+
+      const snippet = `<!-- HIGH-RESOLUTION OFFICIAL STAMP -->
+<div style="display:inline-flex; align-items:center; gap:${state.gap}px; padding:16px 24px; color:${state.color}; font-family:${state.font}; user-select:none; transform:rotate(${state.tilt}deg); opacity:${state.opacity};">
+  <div style="flex-shrink:0; width:${state.logoSize}px; height:${state.logoSize}px;">
+    <img src="${logoSrcForCode}" alt="Emblem" style="width:100%; height:100%; object-fit:contain;" />
+  </div>
+  <div style="display:flex; flex-direction:column; justify-content:center; text-align:left; line-height:1.35;">
+    <div style="font-size:${state.nameSize}px; font-weight:900; margin-bottom:4px; letter-spacing:-0.02em;">${state.name}</div>
+    <div style="font-size:${state.bodySize}px; font-weight:700; margin-bottom:2px;">${state.pen}</div>
+    <div style="font-size:${state.bodySize}px; font-weight:700; margin-bottom:2px;">${state.desig}</div>
+    <div style="font-size:${state.bodySize}px; font-weight:700; margin-bottom:2px;">${state.college}</div>
+    <div style="font-size:${state.bodySize}px; font-weight:700;">${state.location}</div>
+  </div>
+</div>`;
+
+      output.innerText = snippet;
+      modal.classList.add('open');
+    }
+
+    function closeCodeModal() {
+      document.getElementById('codeModal').classList.remove('open');
+    }
+
+    function copySnippetCode() {
+      const code = document.getElementById('htmlCodeOutput').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        showToast('HTML snippet copied to clipboard!');
+        closeCodeModal();
+      });
+    }
+
+    // Print Stamp handler
+    function printStamp() {
+      showToast('Opening print preview...');
+      setTimeout(() => {
+        window.print();
+      }, 250);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastMsg');
+      document.getElementById('toastText').innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
