@@ -1119,8 +1119,8 @@
       bgSmoothing: 5,
       customLogoSrc: null,
       customLogoFileName: "Custom Logo",
-      // Vector states
-      isSvgVector: false,
+      // Vector states (defaulting to pure vector SVG)
+      isSvgVector: true,
       svgXml: null,
       vectorizedSvgXml: null,
       useVectorMode: false
@@ -1133,21 +1133,36 @@
 
     // Initialize
     window.addEventListener('DOMContentLoaded', () => {
-      // Load Default HD Transparent Emblem
-      defaultLogoMaskImg.src = 'GCC_Logo_transparent.png';
-
-      defaultLogoMaskImg.onload = () => {
-        currentRawLogoImg = defaultLogoMaskImg;
-        logoLoaded = true;
-        reprocessLogoMask(2048, 2048);
-        updateStamp();
-      };
-
-      defaultLogoMaskImg.onerror = () => {
-        if (typeof LOGO_BASE64 !== 'undefined' && LOGO_BASE64) {
-          defaultLogoMaskImg.src = LOGO_BASE64;
-        }
-      };
+      // Prioritize Pure Vector SVG Emblem for infinite sharpness
+      if (typeof LOGO_SVG_XML !== 'undefined' && LOGO_SVG_XML) {
+        state.isSvgVector = true;
+        state.svgXml = LOGO_SVG_XML;
+        state.customLogoSrc = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(LOGO_SVG_XML);
+        
+        const svgImg = new Image();
+        svgImg.onload = () => {
+          currentRawLogoImg = svgImg;
+          logoLoaded = true;
+          updateStamp();
+        };
+        svgImg.src = state.customLogoSrc;
+      } else {
+        defaultLogoMaskImg.src = 'GCC_Logo_vector.svg';
+        defaultLogoMaskImg.onload = () => {
+          currentRawLogoImg = defaultLogoMaskImg;
+          state.isSvgVector = true;
+          logoLoaded = true;
+          fetch('GCC_Logo_vector.svg').then(r => r.text()).then(t => {
+            state.svgXml = t;
+            updateStamp();
+          }).catch(() => {
+            updateStamp();
+          });
+        };
+        defaultLogoMaskImg.onerror = () => {
+          defaultLogoMaskImg.src = 'GCC_Logo_transparent.png';
+        };
+      }
 
       setupEventListeners();
     });
@@ -1596,24 +1611,30 @@
 
     // Reset to default GCC emblem
     function resetToDefaultLogo() {
-      defaultLogoMaskImg.src = 'GCC_Logo_transparent.png';
-      currentRawLogoImg = defaultLogoMaskImg;
       state.isCustomLogo = false;
       state.customLogoSrc = null;
-      state.isSvgVector = false;
-      state.svgXml = null;
+      state.isSvgVector = true;
       state.vectorizedSvgXml = null;
       state.useVectorMode = false;
 
-      document.getElementById('activeLogoThumb').src = 'GCC_Logo_transparent.png';
-      document.getElementById('activeLogoTitle').innerText = 'Govt. College Chittur HD Emblem';
+      if (typeof LOGO_SVG_XML !== 'undefined' && LOGO_SVG_XML) {
+        state.svgXml = LOGO_SVG_XML;
+        state.customLogoSrc = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(LOGO_SVG_XML);
+      }
+
+      document.getElementById('activeLogoThumb').src = state.customLogoSrc || 'GCC_Logo_vector.svg';
+      document.getElementById('activeLogoTitle').innerText = 'Govt. College Chittur Vector Emblem';
       document.getElementById('btnResetLogo').style.display = 'none';
       document.getElementById('logoFileInput').value = '';
 
-      reprocessLogoMask(2048, 2048);
-      renderLogoTint();
-      updateStamp();
-      showToast('Reset to default GCC HD Emblem');
+      const svgImg = new Image();
+      svgImg.onload = () => {
+        currentRawLogoImg = svgImg;
+        logoLoaded = true;
+        updateStamp();
+      };
+      svgImg.src = state.customLogoSrc || 'GCC_Logo_vector.svg';
+      showToast('Reset to default GCC Vector Emblem');
     }
 
     // Event Listeners
