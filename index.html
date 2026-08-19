@@ -1133,33 +1133,44 @@
 
     // Initialize
     window.addEventListener('DOMContentLoaded', () => {
-      // Load Default Mask Logo
-      if (typeof LOGO_MASK_BASE64 !== 'undefined' && LOGO_MASK_BASE64) {
-        defaultLogoMaskImg.src = LOGO_MASK_BASE64;
-      } else {
-        defaultLogoMaskImg.src = 'GCC_Logo_mask.png';
-      }
+      // Load Default HD Transparent Emblem
+      defaultLogoMaskImg.src = 'GCC_Logo_transparent.png';
 
       defaultLogoMaskImg.onload = () => {
         currentRawLogoImg = defaultLogoMaskImg;
         logoLoaded = true;
-        reprocessLogoMask();
+        reprocessLogoMask(2048, 2048);
         updateStamp();
+      };
+
+      defaultLogoMaskImg.onerror = () => {
+        if (typeof LOGO_BASE64 !== 'undefined' && LOGO_BASE64) {
+          defaultLogoMaskImg.src = LOGO_BASE64;
+        }
       };
 
       setupEventListeners();
     });
 
     // Check if the current raw image has transparent alpha
-    function hasNativeTransparency(ctx, w, h) {
+    function detectImageTransparency(img) {
       try {
-        const imgData = ctx.getImageData(0, 0, Math.min(w, 200), Math.min(h, 200));
-        const d = imgData.data;
+        const tempC = document.createElement('canvas');
+        const w = Math.min(img.naturalWidth || img.width || 200, 200);
+        const h = Math.min(img.naturalHeight || img.height || 200, 200);
+        tempC.width = w;
+        tempC.height = h;
+        const ctx = tempC.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const d = ctx.getImageData(0, 0, w, h).data;
+        let transparentCount = 0;
         for (let i = 3; i < d.length; i += 4) {
-          if (d[i] < 240) return true; // Found transparent/semi-transparent pixels
+          if (d[i] < 240) transparentCount++;
         }
-      } catch (e) {}
-      return false;
+        return (transparentCount > (w * h * 0.03)); // Image has >3% transparent background
+      } catch (e) {
+        return false;
+      }
     }
 
     // Smart background removal and high-resolution smooth anti-aliased mask generation
@@ -1169,8 +1180,8 @@
       const naturalW = currentRawLogoImg.naturalWidth || currentRawLogoImg.width || 512;
       const naturalH = currentRawLogoImg.naturalHeight || currentRawLogoImg.height || 512;
 
-      const w = targetWidth || Math.max(naturalW, 1024);
-      const h = targetHeight || Math.max(naturalH, 1024);
+      const w = targetWidth || Math.max(naturalW, 2048);
+      const h = targetHeight || Math.max(naturalH, 2048);
 
       currentProcessedMaskCanvas.width = w;
       currentProcessedMaskCanvas.height = h;
@@ -1184,41 +1195,54 @@
         try {
           const imgData = ctx.getImageData(0, 0, w, h);
           const d = imgData.data;
-          const thresh = state.bgThreshold;
-          const smoothingFactor = state.bgSmoothing; // 0 to 10
-          const smoothingWidth = Math.max(10, smoothingFactor * 14);
-          const lowerThresh = Math.max(0, thresh - smoothingWidth);
-          const isAlphaPreserved = state.preserveAlpha;
+          const isTransparent = detectImageTransparency(currentRawLogoImg);
 
-          for (let i = 0; i < d.length; i += 4) {
-            const r = d[i], g = d[i+1], b = d[i+2], a = d[i+3];
-
-            if (a <= 2) {
-              d[i+3] = 0;
-              continue;
+          if (isTransparent && state.preserveAlpha) {
+            // PNG/WebP with pre-existing transparency:
+            // Convert foreground to solid white mask while preserving 100% of the original smooth alpha edges
+            for (let i = 0; i < d.length; i += 4) {
+              const a = d[i+3];
+              if (a > 0) {
+                d[i] = 255;
+                d[i+1] = 255;
+                d[i+2] = 255;
+                // d[i+3] is preserved untouched for razor-sharp native anti-aliasing
+              }
             }
+          } else {
+            // Flattened image with opaque background (e.g. white JPG) needing background clean
+            const thresh = state.bgThreshold;
+            const smoothingFactor = state.bgSmoothing; // 0 to 10
+            const smoothingWidth = Math.max(10, smoothingFactor * 14);
+            const lowerThresh = Math.max(0, thresh - smoothingWidth);
 
-            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+            for (let i = 0; i < d.length; i += 4) {
+              const r = d[i], g = d[i+1], b = d[i+2], a = d[i+3];
 
-            let computedAlpha;
-            if (isAlphaPreserved && a < 250 && luminance < thresh) {
-              // Image already had clean transparent anti-aliased edge
-              computedAlpha = a;
-            } else if (luminance >= thresh) {
-              computedAlpha = 0; // Cut out bright background
-            } else if (luminance <= lowerThresh) {
-              computedAlpha = Math.round(a); // Full ink opacity
-            } else {
-              // Cubic Hermite smoothstep for anti-aliasing gradient
-              const t = (thresh - luminance) / (thresh - lowerThresh);
-              const smoothStep = t * t * (3 - 2 * t);
-              computedAlpha = Math.min(255, Math.max(0, Math.round(smoothStep * (a / 255) * 255)));
+              if (a <= 2) {
+                d[i+3] = 0;
+                continue;
+              }
+
+              const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+
+              let computedAlpha;
+              if (luminance >= thresh) {
+                computedAlpha = 0; // Cut out bright background
+              } else if (luminance <= lowerThresh) {
+                computedAlpha = Math.round(a); // Full ink opacity
+              } else {
+                // Cubic Hermite smoothstep for anti-aliasing gradient
+                const t = (thresh - luminance) / (thresh - lowerThresh);
+                const smoothStep = t * t * (3 - 2 * t);
+                computedAlpha = Math.min(255, Math.max(0, Math.round(smoothStep * (a / 255) * 255)));
+              }
+
+              d[i] = 255;
+              d[i+1] = 255;
+              d[i+2] = 255;
+              d[i+3] = computedAlpha;
             }
-
-            d[i] = 255;
-            d[i+1] = 255;
-            d[i+2] = 255;
-            d[i+3] = computedAlpha;
           }
           ctx.putImageData(imgData, 0, 0);
         } catch (e) {
@@ -1572,6 +1596,7 @@
 
     // Reset to default GCC emblem
     function resetToDefaultLogo() {
+      defaultLogoMaskImg.src = 'GCC_Logo_transparent.png';
       currentRawLogoImg = defaultLogoMaskImg;
       state.isCustomLogo = false;
       state.customLogoSrc = null;
@@ -1585,10 +1610,10 @@
       document.getElementById('btnResetLogo').style.display = 'none';
       document.getElementById('logoFileInput').value = '';
 
-      reprocessLogoMask(1024, 1024);
+      reprocessLogoMask(2048, 2048);
       renderLogoTint();
       updateStamp();
-      showToast('Reset to default GCC Emblem');
+      showToast('Reset to default GCC HD Emblem');
     }
 
     // Event Listeners
