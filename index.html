@@ -806,20 +806,10 @@
             </label>
           </div>
 
-          <!-- Vector Detail Preset -->
-          <div class="input-field" id="vectorPresetField">
-            <label>Vector Detail Fidelity</label>
-            <select id="vectorDetailSelect">
-              <option value="ultra" selected>💎 Ultra-High Detail (Micro-Text, Letters & Accents)</option>
-              <option value="balanced">📐 Balanced Crisp (Standard Seal)</option>
-              <option value="smooth">🌊 Smooth Minimalist (Clean Curves)</option>
-            </select>
-          </div>
-
           <!-- Vector Precision / Smoothness Slider -->
           <div class="input-field" id="vectorPrecisionField">
-            <label>Vector Curve Smoothing: <span class="val" id="vectorSmoothVal">0.5px</span></label>
-            <input type="range" id="vectorSmoothRange" min="2" max="25" value="5">
+            <label>Vector Curve Smoothing: <span class="val" id="vectorSmoothVal">1.2px</span></label>
+            <input type="range" id="vectorSmoothRange" min="5" max="35" value="12">
           </div>
 
           <!-- Logo Auto-Tint / Color mode -->
@@ -1144,13 +1134,12 @@
       bgSmoothing: 5,
       customLogoSrc: null,
       customLogoFileName: "Custom Logo",
-      // Vector states (defaulting to ultra-detailed pure vector SVG)
+      // Vector states (defaulting to pure vector SVG)
       isSvgVector: true,
       svgXml: null,
       vectorizedSvgXml: null,
       useVectorMode: true,
-      vectorDetailMode: 'ultra',
-      vectorEpsilon: 0.5
+      vectorEpsilon: 1.2
     };
 
     let defaultLogoMaskImg = new Image();
@@ -1517,19 +1506,10 @@
       slot.appendChild(clone);
     }
 
-    // High-Resolution Sub-Pixel Marching Squares & Adaptive Bezier Vectorizer
+    // High-Precision Moore-Neighbor Contour Tracer & Smooth Bezier Curve Vectorizer
     function vectorizeImageToSvgString(sourceImgOrCanvas, options = {}) {
-      if (!sourceImgOrCanvas) return null;
-
-      const naturalW = sourceImgOrCanvas.naturalWidth || sourceImgOrCanvas.width || 1024;
-      const naturalH = sourceImgOrCanvas.naturalHeight || sourceImgOrCanvas.height || 1024;
-      
-      let targetSize = 1400;
-      if (state.vectorDetailMode === 'ultra') targetSize = 1600;
-      else if (state.vectorDetailMode === 'smooth') targetSize = 900;
-      if (options.size) targetSize = options.size;
-
-      const baseEpsilon = options.epsilon || state.vectorEpsilon || 0.5;
+      const targetSize = options.size || 512;
+      const epsilon = options.epsilon || state.vectorEpsilon || 1.2;
       const threshold = options.threshold || state.bgThreshold || 240;
 
       const canvas = document.createElement('canvas');
@@ -1545,111 +1525,82 @@
       const w = targetSize;
       const h = targetSize;
 
-      // 1. High-Precision Binary Grid with Sub-Pixel Interpolation
+      // 1. Binary Grid with Smart Transparency & Luminance Detection
+      const binary = new Uint8Array(w * h);
       const isTransparent = detectImageTransparency(sourceImgOrCanvas);
-      const binary = new Uint8Array((w + 1) * (h + 1));
 
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const i = (y * w + x) * 4;
-          const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+      for (let i = 0; i < w * h; i++) {
+        const r = d[i * 4];
+        const g = d[i * 4 + 1];
+        const b = d[i * 4 + 2];
+        const a = d[i * 4 + 3];
 
-          if (isTransparent && state.preserveAlpha) {
-            binary[y * (w + 1) + x] = a > 65 ? 1 : 0;
-          } else {
-            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-            binary[y * (w + 1) + x] = (a > 20 && lum < threshold) ? 1 : 0;
-          }
+        if (isTransparent && state.preserveAlpha) {
+          binary[i] = a > 90 ? 1 : 0;
+        } else {
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          binary[i] = (a > 30 && lum < threshold) ? 1 : 0;
         }
       }
 
-      // 2. Marching Squares Segment Extraction
-      const segments = [];
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const v0 = binary[y * (w + 1) + x];
-          const v1 = binary[y * (w + 1) + (x + 1)];
-          const v2 = binary[(y + 1) * (w + 1) + (x + 1)];
-          const v3 = binary[(y + 1) * (w + 1) + x];
+      // 2. Moore-Neighbor Boundary Tracing
+      const visited = new Uint8Array(w * h);
+      const rawContours = [];
+      const dx = [0, 1, 1, 1, 0, -1, -1, -1];
+      const dy = [-1, -1, 0, 1, 1, 1, 0, -1];
 
-          const cell = (v0 << 3) | (v1 << 2) | (v2 << 1) | v3;
-          if (cell === 0 || cell === 15) continue;
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const idx = y * w + x;
+          if (binary[idx] === 1 && !visited[idx]) {
+            let isBorder = false;
+            for (let k = 0; k < 8; k++) {
+              if (binary[(y + dy[k]) * w + (x + dx[k])] === 0) {
+                isBorder = true;
+                break;
+              }
+            }
 
-          const top = { x: x + 0.5, y: y };
-          const right = { x: x + 1, y: y + 0.5 };
-          const bottom = { x: x + 0.5, y: y + 1 };
-          const left = { x: x, y: y + 0.5 };
+            if (isBorder) {
+              const contour = [];
+              let cx = x, cy = y;
+              let dir = 0;
+              const startX = x, startY = y;
+              let maxIter = w * h;
 
-          switch (cell) {
-            case 1: segments.push([left, bottom]); break;
-            case 2: segments.push([bottom, right]); break;
-            case 3: segments.push([left, right]); break;
-            case 4: segments.push([top, right]); break;
-            case 5: segments.push([left, top]); segments.push([bottom, right]); break;
-            case 6: segments.push([top, bottom]); break;
-            case 7: segments.push([left, top]); break;
-            case 8: segments.push([top, left]); break;
-            case 9: segments.push([bottom, top]); break;
-            case 10: segments.push([top, right]); segments.push([bottom, left]); break;
-            case 11: segments.push([bottom, right]); break;
-            case 12: segments.push([right, left]); break;
-            case 13: segments.push([right, bottom]); break;
-            case 14: segments.push([top, left]); break;
-          }
-        }
-      }
+              while (maxIter-- > 0) {
+                contour.push({ x: cx, y: cy });
+                visited[cy * w + cx] = 1;
 
-      // 3. Chain segments into closed polygon contours (both outer perimeters and inner negative cutouts)
-      const pointKey = (p) => `${Math.round(p.x * 2)},${Math.round(p.y * 2)}`;
-      const edgeMap = new Map();
+                let foundNext = false;
+                let checkDir = (dir + 5) % 8;
+                for (let i = 0; i < 8; i++) {
+                  const nd = (checkDir + i) % 8;
+                  const nx = cx + dx[nd];
+                  const ny = cy + dy[nd];
+                  if (nx >= 0 && nx < w && ny >= 0 && ny < h && binary[ny * w + nx] === 1) {
+                    cx = nx;
+                    cy = ny;
+                    dir = nd;
+                    foundNext = true;
+                    break;
+                  }
+                }
 
-      for (const [p1, p2] of segments) {
-        const k1 = pointKey(p1);
-        if (!edgeMap.has(k1)) edgeMap.set(k1, []);
-        edgeMap.get(k1).push(p2);
-      }
+                if (!foundNext || (cx === startX && cy === startY && contour.length > 2)) {
+                  break;
+                }
+              }
 
-      const visitedEdges = new Set();
-      const rawLoops = [];
-
-      for (const [p1, p2] of segments) {
-        const startKey = pointKey(p1);
-        const edgeId = `${startKey}->${pointKey(p2)}`;
-        if (visitedEdges.has(edgeId)) continue;
-
-        const loop = [p1];
-        let currP = p2;
-        let currKey = pointKey(currP);
-        visitedEdges.add(edgeId);
-
-        let maxSteps = 15000;
-        while (currKey !== startKey && maxSteps-- > 0) {
-          loop.push(currP);
-          const nextList = edgeMap.get(currKey);
-          if (!nextList || nextList.length === 0) break;
-
-          let foundNext = null;
-          for (let i = 0; i < nextList.length; i++) {
-            const candidate = nextList[i];
-            const nextEdgeId = `${currKey}->${pointKey(candidate)}`;
-            if (!visitedEdges.has(nextEdgeId)) {
-              visitedEdges.add(nextEdgeId);
-              foundNext = candidate;
-              break;
+              if (contour.length >= 5) {
+                rawContours.push(contour);
+              }
             }
           }
-
-          if (!foundNext) break;
-          currP = foundNext;
-          currKey = pointKey(currP);
-        }
-
-        if (loop.length >= 4) {
-          rawLoops.push(loop);
         }
       }
 
-      // 4. Adaptive Ramer-Douglas-Peucker (RDP) Polygon Simplification
+      // 3. Ramer-Douglas-Peucker Polygon Simplification
       function rdpSimplify(pts, eps) {
         if (pts.length <= 2) return pts;
         let dmax = 0;
@@ -1681,19 +1632,16 @@
         }
       }
 
-      // 5. Catmull-Rom to Cubic Bezier Curve Generator
+      // 4. Catmull-Rom to Cubic Bezier Curve Fitting
       const pathChunks = [];
-      for (const rawLoop of rawLoops) {
-        // Adaptive tolerance: tight for small micro-features (letters/stars), smooth for long curves
-        const loopLen = rawLoop.length;
-        const adaptiveEps = loopLen < 40 ? Math.min(baseEpsilon, 0.35) : baseEpsilon;
-
-        const simplified = rdpSimplify(rawLoop, adaptiveEps);
+      for (const rawC of rawContours) {
+        if (rawC.length < 5) continue;
+        const simplified = rdpSimplify(rawC, epsilon);
         if (simplified.length < 3) continue;
 
         const n = simplified.length;
         let chunk = `M ${simplified[0].x.toFixed(1)} ${simplified[0].y.toFixed(1)}`;
-        const tension = 0.22;
+        const tension = 0.25;
 
         for (let i = 0; i < n; i++) {
           const p0 = simplified[(i - 1 + n) % n];
@@ -1712,7 +1660,9 @@
         pathChunks.push(chunk);
       }
 
-      if (pathChunks.length === 0) return null;
+      if (pathChunks.length === 0) {
+        return null;
+      }
 
       const compoundD = pathChunks.join(' ');
       return `<?xml version="1.0" encoding="UTF-8"?>
@@ -1939,35 +1889,12 @@
         });
       }
 
-      // Vector Detail Fidelity Selector
-      const vecDetailSelect = document.getElementById('vectorDetailSelect');
-      if (vecDetailSelect) {
-        vecDetailSelect.addEventListener('change', (e) => {
-          state.vectorDetailMode = e.target.value;
-          if (state.vectorDetailMode === 'ultra') {
-            state.vectorEpsilon = 0.35;
-            document.getElementById('vectorSmoothRange').value = 4;
-            document.getElementById('vectorSmoothVal').innerText = '0.4px';
-          } else if (state.vectorDetailMode === 'balanced') {
-            state.vectorEpsilon = 0.65;
-            document.getElementById('vectorSmoothRange').value = 7;
-            document.getElementById('vectorSmoothVal').innerText = '0.7px';
-          } else {
-            state.vectorEpsilon = 1.2;
-            document.getElementById('vectorSmoothRange').value = 12;
-            document.getElementById('vectorSmoothVal').innerText = '1.2px';
-          }
-          if (currentRawLogoImg.complete) {
-            autoVectorizeCurrentLogo();
-          }
-        });
-      }
-
       // Vector Curve Smoothing Slider
       setupSlider('vectorSmoothRange', 'vectorSmoothVal', 'px', (v) => {
         state.vectorEpsilon = v / 10;
         if (state.useVectorMode && currentRawLogoImg.complete) {
           const generatedSvg = vectorizeImageToSvgString(currentRawLogoImg, {
+            size: 600,
             epsilon: state.vectorEpsilon
           });
           if (generatedSvg) {
