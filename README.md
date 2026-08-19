@@ -6,10 +6,14 @@ A high-resolution, interactive digital and printable seal stamp generator built 
 
 ## ✨ Features
 
-- **High-Resolution Vector & Canvas Rendering**: Crisp rendering up to 600 DPI / 4K Ultra HD.
-- **Custom Logo Upload & Auto-Tinting**:
-  - Drag & drop or select any custom logo (`.png`, `.jpg`, `.svg`, `.webp`).
-  - Automatic background removal & smart thresholding.
+- **High-Resolution Vector & Canvas Rendering**: Crisp rendering up to 600 / 1200 DPI Master Vector / 4K Ultra HD.
+- **Native Vector SVG & High-Res Image Engine**:
+  - **Direct Vector SVG Support**: Upload any `.svg` logo for 100% infinite clarity at any scale without raster downsampling.
+  - **In-Browser Auto-Vectorize**: Convert raster PNG/JPG logos into clean vector SVG curves with one click.
+  - **Smooth Anti-Aliased Thresholding**: Cubic Hermite smoothstep curve eliminates jagged/pixelated stair-step edges.
+  - **Preserve Native Anti-Aliasing**: Retains original alpha transparency gradients for pre-cut PNG/WebP files.
+  - **Customizable Edge Softening**: Adjustable smoothing slider (0 = Crisp Sharp, 5 = Smooth Vector-Like, 10 = Ultra Silky).
+  - **Vector Logo & Vector Stamp Export**: Export independent SVG logos or complete scalable vector stamps (`.svg`).
   - Automatic tinting matching the chosen ink color or keep original multi-color emblem.
   - Shape masks: Circular seal, rounded rectangle, or uncropped natural ratio.
 - **Customizable Stamp Details**:

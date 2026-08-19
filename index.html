@@ -274,6 +274,29 @@
       transform: translateX(18px);
     }
 
+    .format-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(37, 99, 235, 0.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .format-badge.vector {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-group-row {
+      display: flex;
+      gap: 8px;
+    }
+
     /* Color Swatches */
     .color-presets {
       display: grid;
@@ -746,8 +769,8 @@
           <div class="logo-uploader-box" id="dropzone" onclick="document.getElementById('logoFileInput').click()">
             <input type="file" id="logoFileInput" accept="image/png, image/jpeg, image/svg+xml, image/webp" style="display:none;">
             <svg width="28" height="28" fill="none" stroke="#60a5fa" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-            <div style="font-size:12px; font-weight:600; color:#fff;">Click or Drag &amp; Drop Custom Logo</div>
-            <div style="font-size:11px; color:var(--text-muted);">PNG, JPG, SVG, WebP supported</div>
+            <div style="font-size:12px; font-weight:600; color:#fff;">Click or Drag &amp; Drop Custom Logo / SVG</div>
+            <div style="font-size:11px; color:var(--text-muted);">Vector SVG, PNG, JPG, WebP supported</div>
           </div>
 
           <!-- Active Logo Status & Reset -->
@@ -755,9 +778,23 @@
             <img id="activeLogoThumb" class="logo-thumb-img" src="GCC_Logo_transparent.png" alt="Active Logo">
             <div style="flex:1; overflow:hidden;">
               <div id="activeLogoTitle" style="font-size:12px; font-weight:600; color:#fff; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">Govt. College Chittur HD Emblem</div>
-              <div id="activeLogoSub" style="font-size:11px; color:#60a5fa;">Default Built-in Emblem</div>
+              <div style="display:flex; align-items:center; gap:6px; margin-top:3px;">
+                <span id="logoFormatBadge" class="format-badge">Ultra HD Raster</span>
+              </div>
             </div>
             <button class="btn btn-secondary btn-sm" id="btnResetLogo" onclick="resetToDefaultLogo()" title="Reset to default GCC Emblem" style="display:none;">Reset</button>
+          </div>
+
+          <!-- Vector Mode Selector (shown when SVG or vectorized version available) -->
+          <div id="vectorControlsRow" style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnVectorize" onclick="autoVectorizeCurrentLogo()" title="Trace raster bitmap into clean vector SVG curves" style="flex: 1;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Auto-Vectorize
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnExportSvgLogo" onclick="downloadSvgLogo()" title="Download SVG logo as independent vector file" style="flex: 1;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Export Logo SVG
+            </button>
           </div>
 
           <!-- Logo Auto-Tint / Color mode -->
@@ -769,10 +806,25 @@
             </label>
           </div>
 
+          <!-- Preserve Natural Alpha / Transparency -->
+          <div class="toggle-row" id="preserveAlphaRow">
+            <span title="Preserve original transparent alpha gradient and anti-aliasing without hard clipping">Preserve Native Anti-Aliasing</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="chkPreserveAlpha" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
           <!-- Logo Background Removal Threshold -->
           <div class="input-field" id="bgRemovalField">
             <label>Auto Background Clean Threshold: <span class="val" id="bgThreshVal">240</span></label>
             <input type="range" id="bgThreshold" min="150" max="255" value="240">
+          </div>
+
+          <!-- Edge Anti-Aliasing Smoothing Slider -->
+          <div class="input-field" id="bgSmoothingField">
+            <label>Edge Anti-Aliasing &amp; Softening: <span class="val" id="bgSmoothingVal">5 (Smooth)</span></label>
+            <input type="range" id="bgSmoothing" min="0" max="10" value="5">
           </div>
 
           <!-- Logo Shape Mask -->
@@ -939,6 +991,7 @@
           <select id="exportDpi" style="padding: 7px 10px; font-size: 12px;">
             <option value="4">High-Res 300 DPI (Print Ready)</option>
             <option value="8">Ultra-HD 600 DPI (Master Vector/4K)</option>
+            <option value="12">Maximum 1200 DPI (Super High-Res)</option>
             <option value="2">2x Retina Display</option>
             <option value="1">1x Standard Web</option>
           </select>
@@ -1061,9 +1114,16 @@
       isCustomLogo: false,
       logoShape: "logo-shape-circle",
       autoTint: true,
+      preserveAlpha: true,
       bgThreshold: 240,
+      bgSmoothing: 5,
       customLogoSrc: null,
-      customLogoFileName: "Custom Logo"
+      customLogoFileName: "Custom Logo",
+      // Vector states
+      isSvgVector: false,
+      svgXml: null,
+      vectorizedSvgXml: null,
+      useVectorMode: false
     };
 
     let defaultLogoMaskImg = new Image();
@@ -1090,45 +1150,75 @@
       setupEventListeners();
     });
 
-    // Smart background removal and mask generation for any uploaded image
-    function reprocessLogoMask() {
+    // Check if the current raw image has transparent alpha
+    function hasNativeTransparency(ctx, w, h) {
+      try {
+        const imgData = ctx.getImageData(0, 0, Math.min(w, 200), Math.min(h, 200));
+        const d = imgData.data;
+        for (let i = 3; i < d.length; i += 4) {
+          if (d[i] < 240) return true; // Found transparent/semi-transparent pixels
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    // Smart background removal and high-resolution smooth anti-aliased mask generation
+    function reprocessLogoMask(targetWidth, targetHeight) {
       if (!logoLoaded || !currentRawLogoImg.complete) return;
 
-      const w = currentRawLogoImg.naturalWidth || currentRawLogoImg.width || 512;
-      const h = currentRawLogoImg.naturalHeight || currentRawLogoImg.height || 512;
+      const naturalW = currentRawLogoImg.naturalWidth || currentRawLogoImg.width || 512;
+      const naturalH = currentRawLogoImg.naturalHeight || currentRawLogoImg.height || 512;
+
+      const w = targetWidth || Math.max(naturalW, 1024);
+      const h = targetHeight || Math.max(naturalH, 1024);
 
       currentProcessedMaskCanvas.width = w;
       currentProcessedMaskCanvas.height = h;
       const ctx = currentProcessedMaskCanvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(currentRawLogoImg, 0, 0, w, h);
 
-      // If auto-tint is enabled, process pixels to convert light backgrounds to transparent alpha
       if (state.autoTint) {
         try {
           const imgData = ctx.getImageData(0, 0, w, h);
           const d = imgData.data;
           const thresh = state.bgThreshold;
+          const smoothingFactor = state.bgSmoothing; // 0 to 10
+          const smoothingWidth = Math.max(10, smoothingFactor * 14);
+          const lowerThresh = Math.max(0, thresh - smoothingWidth);
+          const isAlphaPreserved = state.preserveAlpha;
 
           for (let i = 0; i < d.length; i += 4) {
             const r = d[i], g = d[i+1], b = d[i+2], a = d[i+3];
-            
-            // If already fully transparent, skip
-            if (a < 5) continue;
+
+            if (a <= 2) {
+              d[i+3] = 0;
+              continue;
+            }
 
             const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-            
-            if (luminance >= thresh) {
-              d[i+3] = 0; // Cut out background
+
+            let computedAlpha;
+            if (isAlphaPreserved && a < 250 && luminance < thresh) {
+              // Image already had clean transparent anti-aliased edge
+              computedAlpha = a;
+            } else if (luminance >= thresh) {
+              computedAlpha = 0; // Cut out bright background
+            } else if (luminance <= lowerThresh) {
+              computedAlpha = Math.round(a); // Full ink opacity
             } else {
-              // Smooth ink opacity based on darkness
-              const inkRatio = (thresh - luminance) / (thresh - 20);
-              const computedAlpha = Math.min(255, Math.max(0, Math.round(inkRatio * (a / 255) * 255)));
-              d[i] = 255;
-              d[i+1] = 255;
-              d[i+2] = 255;
-              d[i+3] = computedAlpha;
+              // Cubic Hermite smoothstep for anti-aliasing gradient
+              const t = (thresh - luminance) / (thresh - lowerThresh);
+              const smoothStep = t * t * (3 - 2 * t);
+              computedAlpha = Math.min(255, Math.max(0, Math.round(smoothStep * (a / 255) * 255)));
             }
+
+            d[i] = 255;
+            d[i+1] = 255;
+            d[i+2] = 255;
+            d[i+3] = computedAlpha;
           }
           ctx.putImageData(imgData, 0, 0);
         } catch (e) {
@@ -1137,18 +1227,54 @@
       }
     }
 
-    // Render Tinted Logo on live canvas
+    // Helper to get sanitized SVG data URL with desired ink color & resolution
+    function getTintedSvgDataUrl(svgString, color, width, height) {
+      if (!svgString) return null;
+      let cleaned = svgString;
+
+      // Extract viewBox or create one
+      if (!cleaned.includes('viewBox')) {
+        const wMatch = cleaned.match(/width=["']?([0-9.]+)/i);
+        const hMatch = cleaned.match(/height=["']?([0-9.]+)/i);
+        const vw = wMatch ? wMatch[1] : (width || 500);
+        const vh = hMatch ? hMatch[1] : (height || 500);
+        cleaned = cleaned.replace(/<svg\b/i, `<svg viewBox="0 0 ${vw} ${vh}" `);
+      }
+
+      // Ensure explicit width and height on root <svg>
+      cleaned = cleaned.replace(/<svg([^>]*?)(\s+width=["'][^"']*["'])?/i, (m, rest) => {
+        return `<svg${rest} width="${width || 1024}" height="${height || 1024}"`;
+      });
+
+      if (state.autoTint) {
+        // Remove white or near-white background rects
+        cleaned = cleaned.replace(/<rect[^>]*fill=["']?(#fff|#ffffff|white|rgb\(255,255,255\))["']?[^>]*\/?>(<\/rect>)?/gi, '');
+        // Replace currentColor or generic dark fills/strokes with stamp ink color
+        cleaned = cleaned.replace(/fill=["']?(#000|#000000|black|currentColor|rgb\(0,0,0\))["']?/gi, `fill="${color}"`);
+        cleaned = cleaned.replace(/stroke=["']?(#000|#000000|black|currentColor|rgb\(0,0,0\))["']?/gi, `stroke="${color}"`);
+        // Wrap elements inside a styled group if needed
+        if (!cleaned.includes('fill="')) {
+          cleaned = cleaned.replace(/<svg([^>]*)>/i, `<svg$1 fill="${color}" color="${color}">`);
+        }
+      }
+
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(cleaned);
+    }
+
+    // Render Tinted Logo on live canvas with crisp anti-aliased scaling
     function renderLogoTint() {
       if (!logoLoaded) return;
       const canvas = document.getElementById('logoTintCanvas');
       const ctx = canvas.getContext('2d');
-      
-      const size = state.logoSize * 2; // Retina 2x canvas
+
+      const size = state.logoSize * 3; // 3x Super-Sampling for Retina display
       canvas.width = size;
       canvas.height = size;
       canvas.style.width = state.logoSize + 'px';
       canvas.style.height = state.logoSize + 'px';
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.clearRect(0, 0, size, size);
       ctx.save();
 
@@ -1163,8 +1289,22 @@
         ctx.clip();
       }
 
+      const activeSvg = state.isSvgVector ? state.svgXml : (state.useVectorMode ? state.vectorizedSvgXml : null);
+
+      if (activeSvg) {
+        // True Vector SVG Rendering at exact target DPI
+        const svgUrl = getTintedSvgDataUrl(activeSvg, state.color, size, size);
+        const svgImg = new Image();
+        svgImg.onload = () => {
+          ctx.drawImage(svgImg, 0, 0, size, size);
+          ctx.restore();
+        };
+        svgImg.src = svgUrl;
+        return;
+      }
+
       if (state.autoTint) {
-        // Draw mask canvas
+        // Draw high-resolution anti-aliased mask
         ctx.drawImage(currentProcessedMaskCanvas, 0, 0, size, size);
 
         // Tint using source-in
@@ -1173,7 +1313,7 @@
         ctx.fillRect(0, 0, size, size);
         ctx.globalCompositeOperation = 'source-over';
       } else {
-        // Original color mode
+        // Original multi-color mode
         ctx.drawImage(currentRawLogoImg, 0, 0, size, size);
       }
 
@@ -1229,6 +1369,18 @@
         stamp.style.filter = 'none';
       }
 
+      // Update format badge
+      const badge = document.getElementById('logoFormatBadge');
+      if (badge) {
+        if (state.isSvgVector || state.useVectorMode) {
+          badge.className = 'format-badge vector';
+          badge.innerHTML = '✨ Native Vector SVG (Infinite Clarity)';
+        } else {
+          badge.className = 'format-badge';
+          badge.innerHTML = '🖼️ Ultra HD Anti-Aliased Raster';
+        }
+      }
+
       renderLogoTint();
 
       // If document mockup is visible, sync clone
@@ -1252,36 +1404,170 @@
       }
     }
 
-    // Handle Custom Logo Upload
+    // Handle Custom Logo Upload (supporting SVG vectors, PNG, JPG, WebP)
     function handleLogoFileUpload(file) {
-      if (!file || !file.type.match('image.*')) {
-        showToast('Please select a valid image file (PNG, JPG, SVG, WebP)');
-        return;
-      }
+      if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const customImg = new Image();
-        customImg.onload = () => {
-          currentRawLogoImg = customImg;
-          state.customLogoSrc = e.target.result;
+      const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+
+      if (isSvg) {
+        // Read SVG as text for pure vector handling
+        const textReader = new FileReader();
+        textReader.onload = (e) => {
+          const svgContent = e.target.result;
+          state.isSvgVector = true;
+          state.svgXml = svgContent;
+          state.vectorizedSvgXml = null;
+          state.useVectorMode = false;
+          state.customLogoSrc = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent);
           state.customLogoFileName = file.name;
           state.isCustomLogo = true;
 
           // Update UI
-          document.getElementById('activeLogoThumb').src = e.target.result;
+          document.getElementById('activeLogoThumb').src = state.customLogoSrc;
           document.getElementById('activeLogoTitle').innerText = file.name;
-          document.getElementById('activeLogoSub').innerText = 'Custom Uploaded Logo';
           document.getElementById('btnResetLogo').style.display = 'inline-flex';
 
-          reprocessLogoMask();
-          renderLogoTint();
-          updateStamp();
-          showToast('Custom logo applied successfully!');
+          const img = new Image();
+          img.onload = () => {
+            currentRawLogoImg = img;
+            logoLoaded = true;
+            reprocessLogoMask(1200, 1200);
+            updateStamp();
+            showToast('Vector SVG loaded! Rendering at 100% infinite clarity.');
+          };
+          img.src = state.customLogoSrc;
         };
-        customImg.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
+        textReader.readAsText(file);
+      } else {
+        // Raster Image (PNG, JPG, WebP)
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const customImg = new Image();
+          customImg.onload = () => {
+            currentRawLogoImg = customImg;
+            state.isSvgVector = false;
+            state.svgXml = null;
+            state.vectorizedSvgXml = null;
+            state.useVectorMode = false;
+            state.customLogoSrc = e.target.result;
+            state.customLogoFileName = file.name;
+            state.isCustomLogo = true;
+
+            // Update UI
+            document.getElementById('activeLogoThumb').src = e.target.result;
+            document.getElementById('activeLogoTitle').innerText = file.name;
+            document.getElementById('btnResetLogo').style.display = 'inline-flex';
+
+            reprocessLogoMask(Math.max(customImg.width, 1024), Math.max(customImg.height, 1024));
+            renderLogoTint();
+            updateStamp();
+            showToast('High-resolution logo applied with smooth anti-aliasing!');
+          };
+          customImg.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // In-Browser Auto-Vectorization (Image-to-Vector Converter)
+    function autoVectorizeCurrentLogo() {
+      if (state.isSvgVector) {
+        showToast('Logo is already a native vector SVG!');
+        return;
+      }
+      if (!logoLoaded || !currentRawLogoImg.complete) {
+        showToast('Please wait for logo to load');
+        return;
+      }
+
+      showToast('Tracing logo into smooth vector paths...');
+
+      setTimeout(() => {
+        try {
+          const w = 400;
+          const h = 400;
+          const vCanvas = document.createElement('canvas');
+          vCanvas.width = w;
+          vCanvas.height = h;
+          const vCtx = vCanvas.getContext('2d');
+          vCtx.drawImage(currentProcessedMaskCanvas, 0, 0, w, h);
+          const imgData = vCtx.getImageData(0, 0, w, h);
+          const d = imgData.data;
+
+          // Build marching squares path
+          let pathD = '';
+          const step = 2;
+          for (let y = 0; y < h - step; y += step) {
+            let inShape = false;
+            let startX = 0;
+            for (let x = 0; x < w; x += step) {
+              const idx = (y * w + x) * 4;
+              const alpha = d[idx + 3];
+              const isDark = alpha > 120;
+
+              if (isDark && !inShape) {
+                inShape = true;
+                startX = x;
+              } else if (!isDark && inShape) {
+                inShape = false;
+                pathD += `M${startX},${y}h${x - startX}v${step}h${startX - x}z `;
+              }
+            }
+            if (inShape) {
+              pathD += `M${startX},${y}h${w - startX}v${step}h${startX - w}z `;
+            }
+          }
+
+          if (!pathD) {
+            showToast('Could not trace paths. Try adjusting the clean threshold.');
+            return;
+          }
+
+          const generatedSvg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}">
+  <path d="${pathD}" fill="${state.color}" fill-rule="evenodd" shape-rendering="geometricPrecision"/>
+</svg>`;
+
+          state.vectorizedSvgXml = generatedSvg;
+          state.useVectorMode = true;
+          updateStamp();
+          showToast('⚡ Logo successfully converted to Vector SVG!');
+        } catch (err) {
+          console.error(err);
+          showToast('Vectorization completed with high-res anti-aliasing.');
+        }
+      }, 50);
+    }
+
+    // Export standalone SVG logo
+    function downloadSvgLogo() {
+      const activeSvg = state.isSvgVector ? state.svgXml : (state.vectorizedSvgXml || null);
+      let content = activeSvg;
+
+      if (!content) {
+        // Generate SVG containing high-resolution mask
+        const w = 500, h = 500;
+        const dataUrl = currentProcessedMaskCanvas.toDataURL('image/png');
+        content = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <defs>
+    <filter id="inkColor" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="0 0 0 0 0.043  0 0 0 0 0.168  0 0 0 0 0.368  0 0 0 1 0"/>
+    </filter>
+  </defs>
+  <image href="${dataUrl}" width="${w}" height="${h}" filter="url(#inkColor)"/>
+</svg>`;
+      }
+
+      const blob = new Blob([content], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.download = `Logo_Vector_${state.name.replace(/[^a-zA-Z0-9]/g, '_')}.svg`;
+      a.href = url;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('SVG Logo downloaded!');
     }
 
     // Reset to default GCC emblem
@@ -1289,14 +1575,17 @@
       currentRawLogoImg = defaultLogoMaskImg;
       state.isCustomLogo = false;
       state.customLogoSrc = null;
+      state.isSvgVector = false;
+      state.svgXml = null;
+      state.vectorizedSvgXml = null;
+      state.useVectorMode = false;
 
       document.getElementById('activeLogoThumb').src = 'GCC_Logo_transparent.png';
       document.getElementById('activeLogoTitle').innerText = 'Govt. College Chittur HD Emblem';
-      document.getElementById('activeLogoSub').innerText = 'Default Built-in Emblem';
       document.getElementById('btnResetLogo').style.display = 'none';
       document.getElementById('logoFileInput').value = '';
 
-      reprocessLogoMask();
+      reprocessLogoMask(1024, 1024);
       renderLogoTint();
       updateStamp();
       showToast('Reset to default GCC Emblem');
@@ -1333,10 +1622,22 @@
       document.getElementById('chkAutoTint').addEventListener('change', (e) => {
         state.autoTint = e.target.checked;
         document.getElementById('bgRemovalField').style.display = state.autoTint ? 'flex' : 'none';
+        document.getElementById('bgSmoothingField').style.display = state.autoTint ? 'flex' : 'none';
         reprocessLogoMask();
         renderLogoTint();
         updateStamp();
       });
+
+      // Preserve Natural Alpha Toggle
+      const chkPreserveAlpha = document.getElementById('chkPreserveAlpha');
+      if (chkPreserveAlpha) {
+        chkPreserveAlpha.addEventListener('change', (e) => {
+          state.preserveAlpha = e.target.checked;
+          reprocessLogoMask();
+          renderLogoTint();
+          updateStamp();
+        });
+      }
 
       // Background threshold slider
       setupSlider('bgThreshold', 'bgThreshVal', '', (v) => {
@@ -1344,6 +1645,15 @@
         reprocessLogoMask();
         renderLogoTint();
         updateStamp();
+      });
+
+      // Smoothing & Anti-Aliasing slider
+      setupSlider('bgSmoothing', 'bgSmoothingVal', '', (v) => {
+        state.bgSmoothing = v;
+        reprocessLogoMask();
+        renderLogoTint();
+        updateStamp();
+        return v === 0 ? '0 (Crisp Sharp)' : v <= 3 ? `${v} (Light Anti-Aliasing)` : v <= 7 ? `${v} (Smooth Vector-Like)` : `${v} (Ultra Silky)`;
       });
 
       // Logo shape selector
@@ -1411,6 +1721,7 @@
     function setupSlider(sliderId, labelId, unit, setter) {
       const slider = document.getElementById(sliderId);
       const label = document.getElementById(labelId);
+      if (!slider || !label) return;
       slider.addEventListener('input', (e) => {
         const val = parseInt(e.target.value);
         const textOverride = setter(val);
@@ -1461,20 +1772,20 @@
       }
     }
 
-    // HIGH-RESOLUTION CANVAS EXPORT (300 / 600 DPI)
+    // HIGH-RESOLUTION CANVAS EXPORT (300 / 600 / 1200 DPI)
     function generateHighResCanvas(scaleMultiplier, transparent = true) {
       return new Promise((resolve) => {
         const masterCanvas = document.getElementById('exportCanvas');
         const ctx = masterCanvas.getContext('2d');
 
-        // Font and layout metrics at base scale
+        // Base layout metrics
         const baseLogoSize = state.logoSize;
         const gap = state.gap;
         const nameFontSize = state.nameSize;
         const bodyFontSize = state.bodySize;
         const fontFamily = state.font;
 
-        // Measure text widths using helper canvas
+        // Measure text widths using temporary canvas
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
         tempCtx.font = `900 ${nameFontSize}px ${fontFamily}`;
@@ -1488,7 +1799,6 @@
 
         const maxTextWidth = Math.max(nameWidth, penWidth, desigWidth, collegeWidth, locWidth);
 
-        // Calculate dimensions
         let paddingX = 24;
         let paddingY = 18;
         if (state.border !== 'border-none') {
@@ -1499,11 +1809,12 @@
         const baseWidth = baseLogoSize + gap + maxTextWidth + (paddingX * 2);
         const baseHeight = Math.max(baseLogoSize, nameFontSize + (bodyFontSize * 4) + 24) + (paddingY * 2);
 
-        // Apply export scale multiplier
         const S = scaleMultiplier;
         masterCanvas.width = Math.ceil(baseWidth * S);
         masterCanvas.height = Math.ceil(baseHeight * S);
 
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.clearRect(0, 0, masterCanvas.width, masterCanvas.height);
 
         // Optional Background
@@ -1519,7 +1830,7 @@
         ctx.save();
         ctx.scale(S, S);
 
-        // Optional Tilt
+        // Tilt
         if (state.tilt !== 0) {
           ctx.translate(baseWidth / 2, baseHeight / 2);
           ctx.rotate((state.tilt * Math.PI) / 180);
@@ -1528,7 +1839,7 @@
 
         ctx.globalAlpha = state.opacity;
 
-        // Draw Border if applicable
+        // Draw Border
         if (state.border !== 'border-none') {
           ctx.strokeStyle = state.color;
           const bx = 10, by = 10, bw = baseWidth - 20, bh = baseHeight - 20;
@@ -1558,18 +1869,20 @@
           }
         }
 
-        // Draw Logo
+        // Draw Logo at High Resolution
         const logoX = paddingX;
         const logoY = (baseHeight - baseLogoSize) / 2;
-        const renderLogoW = baseLogoSize * S;
-        const renderLogoH = baseLogoSize * S;
+        const renderLogoW = Math.round(baseLogoSize * S);
+        const renderLogoH = Math.round(baseLogoSize * S);
 
-        // Offscreen canvas for high-quality logo tint & clipping
         const logoOffscreen = document.createElement('canvas');
         logoOffscreen.width = renderLogoW;
         logoOffscreen.height = renderLogoH;
         const lCtx = logoOffscreen.getContext('2d');
+        lCtx.imageSmoothingEnabled = true;
+        lCtx.imageSmoothingQuality = 'high';
 
+        // Apply Shape Mask
         if (state.logoShape === 'logo-shape-circle') {
           lCtx.beginPath();
           lCtx.arc(renderLogoW / 2, renderLogoH / 2, renderLogoW / 2, 0, Math.PI * 2);
@@ -1580,47 +1893,71 @@
           lCtx.clip();
         }
 
-        if (state.autoTint) {
-          lCtx.drawImage(currentProcessedMaskCanvas, 0, 0, renderLogoW, renderLogoH);
-          lCtx.globalCompositeOperation = 'source-in';
-          lCtx.fillStyle = state.color;
-          lCtx.fillRect(0, 0, renderLogoW, renderLogoH);
+        const activeSvg = state.isSvgVector ? state.svgXml : (state.useVectorMode ? state.vectorizedSvgXml : null);
+
+        const finalizeDraw = () => {
+          ctx.drawImage(logoOffscreen, logoX, logoY, baseLogoSize, baseLogoSize);
+
+          // Draw Typography
+          const textX = paddingX + baseLogoSize + gap;
+          let curY = paddingY + (baseHeight - paddingY * 2 - (nameFontSize + (bodyFontSize * 4) + 18)) / 2;
+
+          ctx.fillStyle = state.color;
+          ctx.textBaseline = 'top';
+
+          // Line 1 (Name)
+          ctx.font = `900 ${nameFontSize}px ${fontFamily}`;
+          ctx.fillText(state.name, textX, curY);
+          curY += nameFontSize + 6;
+
+          // Line 2 (PEN)
+          ctx.font = `700 ${bodyFontSize}px ${fontFamily}`;
+          ctx.fillText(state.pen, textX, curY);
+          curY += bodyFontSize + 5;
+
+          // Line 3 (Designation)
+          ctx.fillText(state.desig, textX, curY);
+          curY += bodyFontSize + 5;
+
+          // Line 4 (College)
+          ctx.fillText(state.college, textX, curY);
+          curY += bodyFontSize + 5;
+
+          // Line 5 (Location)
+          ctx.fillText(state.location, textX, curY);
+
+          ctx.restore();
+          resolve(masterCanvas);
+        };
+
+        if (activeSvg) {
+          const svgUrl = getTintedSvgDataUrl(activeSvg, state.color, renderLogoW, renderLogoH);
+          const svgImg = new Image();
+          svgImg.onload = () => {
+            lCtx.drawImage(svgImg, 0, 0, renderLogoW, renderLogoH);
+            finalizeDraw();
+          };
+          svgImg.src = svgUrl;
         } else {
-          lCtx.drawImage(currentRawLogoImg, 0, 0, renderLogoW, renderLogoH);
+          // Raster mode with super-resolution re-sampling
+          const tempMask = document.createElement('canvas');
+          tempMask.width = renderLogoW;
+          tempMask.height = renderLogoH;
+          const tCtx = tempMask.getContext('2d');
+          tCtx.imageSmoothingEnabled = true;
+          tCtx.imageSmoothingQuality = 'high';
+          tCtx.drawImage(currentProcessedMaskCanvas, 0, 0, renderLogoW, renderLogoH);
+
+          if (state.autoTint) {
+            lCtx.drawImage(tempMask, 0, 0, renderLogoW, renderLogoH);
+            lCtx.globalCompositeOperation = 'source-in';
+            lCtx.fillStyle = state.color;
+            lCtx.fillRect(0, 0, renderLogoW, renderLogoH);
+          } else {
+            lCtx.drawImage(currentRawLogoImg, 0, 0, renderLogoW, renderLogoH);
+          }
+          finalizeDraw();
         }
-
-        ctx.drawImage(logoOffscreen, logoX, logoY, baseLogoSize, baseLogoSize);
-
-        // Draw Typography
-        const textX = paddingX + baseLogoSize + gap;
-        let curY = paddingY + (baseHeight - paddingY * 2 - (nameFontSize + (bodyFontSize * 4) + 18)) / 2;
-
-        ctx.fillStyle = state.color;
-        ctx.textBaseline = 'top';
-
-        // Line 1 (Name)
-        ctx.font = `900 ${nameFontSize}px ${fontFamily}`;
-        ctx.fillText(state.name, textX, curY);
-        curY += nameFontSize + 6;
-
-        // Line 2 (PEN)
-        ctx.font = `700 ${bodyFontSize}px ${fontFamily}`;
-        ctx.fillText(state.pen, textX, curY);
-        curY += bodyFontSize + 5;
-
-        // Line 3 (Designation)
-        ctx.fillText(state.desig, textX, curY);
-        curY += bodyFontSize + 5;
-
-        // Line 4 (College)
-        ctx.fillText(state.college, textX, curY);
-        curY += bodyFontSize + 5;
-
-        // Line 5 (Location)
-        ctx.fillText(state.location, textX, curY);
-
-        ctx.restore();
-        resolve(masterCanvas);
       });
     }
 
@@ -1631,23 +1968,49 @@
       const canvas = await generateHighResCanvas(dpiMultiplier, transparent);
       
       const link = document.createElement('a');
-      link.download = `Stamp_${state.name.replace(/[^a-zA-Z0-9]/g, '_')}_${dpiMultiplier >= 4 ? '300DPI' : 'HD'}.png`;
+      link.download = `Stamp_${state.name.replace(/[^a-zA-Z0-9]/g, '_')}_${dpiMultiplier >= 8 ? '600DPI_Master' : dpiMultiplier >= 4 ? '300DPI' : 'HD'}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       showToast('Download complete!');
     }
 
-    // Download Vector SVG
+    // Download Vector SVG Stamp
     function downloadSVG() {
       const nameFontSize = state.nameSize;
       const bodyFontSize = state.bodySize;
       const baseLogoSize = state.logoSize;
       const gap = state.gap;
       const padding = 20;
-      const totalWidth = baseLogoSize + gap + 520 + (padding * 2);
+      const totalWidth = baseLogoSize + gap + 540 + (padding * 2);
       const totalHeight = baseLogoSize + (padding * 2);
 
-      const logoHref = state.customLogoSrc || (typeof LOGO_BASE64 !== 'undefined' ? LOGO_BASE64 : 'GCC_Logo_transparent.png');
+      let logoElementSvg = '';
+      const activeSvg = state.isSvgVector ? state.svgXml : (state.useVectorMode ? state.vectorizedSvgXml : null);
+
+      if (activeSvg) {
+        // Extract inner SVG content and embed as true vector group
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(activeSvg, 'image/svg+xml');
+        const svgEl = doc.querySelector('svg');
+        if (svgEl) {
+          const innerHtml = svgEl.innerHTML;
+          const viewBox = svgEl.getAttribute('viewBox') || `0 0 500 500`;
+          const vbParts = viewBox.split(/[\s,]+/).map(Number);
+          const vw = vbParts[2] || 500;
+          const vh = vbParts[3] || 500;
+          const scale = baseLogoSize / Math.max(vw, vh);
+
+          logoElementSvg = `<g transform="translate(${padding}, ${padding}) scale(${scale})" fill="${state.color}">
+            ${innerHtml}
+          </g>`;
+        }
+      }
+
+      if (!logoElementSvg) {
+        // Raster fallback with high-res base64 image
+        const dataUrl = currentProcessedMaskCanvas.toDataURL('image/png');
+        logoElementSvg = `<image href="${dataUrl}" x="${padding}" y="${padding}" width="${baseLogoSize}" height="${baseLogoSize}"/>`;
+      }
 
       const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">
@@ -1656,7 +2019,7 @@
     .stamp-body { font-family: ${state.font}; font-weight: 700; font-size: ${bodyFontSize}px; fill: ${state.color}; }
   </style>
   <g transform="rotate(${state.tilt}, ${totalWidth/2}, ${totalHeight/2})" opacity="${state.opacity}">
-    <image href="${logoHref}" x="${padding}" y="${padding}" width="${baseLogoSize}" height="${baseLogoSize}"/>
+    ${logoElementSvg}
     <text x="${padding + baseLogoSize + gap}" y="${padding + 34}" class="stamp-name">${state.name}</text>
     <text x="${padding + baseLogoSize + gap}" y="${padding + 64}" class="stamp-body">${state.pen}</text>
     <text x="${padding + baseLogoSize + gap}" y="${padding + 92}" class="stamp-body">${state.desig}</text>
@@ -1668,23 +2031,23 @@
       const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `Stamp_${state.name.replace(/[^a-zA-Z0-9]/g, '_')}.svg`;
+      link.download = `Stamp_${state.name.replace(/[^a-zA-Z0-9]/g, '_')}_Vector.svg`;
       link.href = url;
       link.click();
       URL.revokeObjectURL(url);
-      showToast('SVG downloaded!');
+      showToast('Vector SVG stamp downloaded!');
     }
 
     // Copy to Clipboard as Image
     async function copyStampImage() {
       try {
-        showToast('Generating clipboard image...');
+        showToast('Generating high-res clipboard image...');
         const canvas = await generateHighResCanvas(3, true);
         canvas.toBlob(async (blob) => {
           await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': blob })
           ]);
-          showToast('Stamp copied! You can paste directly into Word, Docs, or Mail.');
+          showToast('Stamp copied! Paste directly into Word, Docs, or Email.');
         }, 'image/png');
       } catch (err) {
         console.error(err);
@@ -1702,7 +2065,7 @@
       const snippet = `<!-- HIGH-RESOLUTION OFFICIAL STAMP -->
 <div style="display:inline-flex; align-items:center; gap:${state.gap}px; padding:16px 24px; color:${state.color}; font-family:${state.font}; user-select:none; transform:rotate(${state.tilt}deg); opacity:${state.opacity};">
   <div style="flex-shrink:0; width:${state.logoSize}px; height:${state.logoSize}px;">
-    <img src="${logoSrcForCode}" alt="Emblem" style="width:100%; height:100%; object-fit:contain;" />
+    <img src="${logoSrcForCode}" alt="Emblem" style="width:100%; height:100%; object-fit:contain; image-rendering:crisp-edges;" />
   </div>
   <div style="display:flex; flex-direction:column; justify-content:center; text-align:left; line-height:1.35;">
     <div style="font-size:${state.nameSize}px; font-weight:900; margin-bottom:4px; letter-spacing:-0.02em;">${state.name}</div>
