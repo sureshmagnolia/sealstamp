@@ -797,6 +797,21 @@
             </button>
           </div>
 
+          <!-- Pure Vector SVG Mode Toggle -->
+          <div class="toggle-row" id="vectorModeRow">
+            <span title="Render mathematically smooth vector SVG curves instead of raster bitmap pixels">⚡ Vector SVG Mode (Pure Curves)</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="chkVectorMode" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <!-- Vector Precision / Smoothness Slider -->
+          <div class="input-field" id="vectorPrecisionField">
+            <label>Vector Curve Smoothing: <span class="val" id="vectorSmoothVal">1.2px</span></label>
+            <input type="range" id="vectorSmoothRange" min="5" max="35" value="12">
+          </div>
+
           <!-- Logo Auto-Tint / Color mode -->
           <div class="toggle-row">
             <span>Auto-Tint with Stamp Ink</span>
@@ -1123,7 +1138,8 @@
       isSvgVector: true,
       svgXml: null,
       vectorizedSvgXml: null,
-      useVectorMode: false
+      useVectorMode: true,
+      vectorEpsilon: 1.2
     };
 
     let defaultLogoMaskImg = new Image();
@@ -1497,14 +1513,186 @@
       const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
 
       if (isSvg) {
-        // Read SVG as text for pure vector handling
+    // High-Precision Moore-Neighbor Contour Tracer & Smooth Bezier Curve Vectorizer
+    function vectorizeImageToSvgString(sourceImgOrCanvas, options = {}) {
+      const targetSize = options.size || 512;
+      const epsilon = options.epsilon || state.vectorEpsilon || 1.2;
+      const threshold = options.threshold || state.bgThreshold || 240;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(sourceImgOrCanvas, 0, 0, targetSize, targetSize);
+
+      const imgData = ctx.getImageData(0, 0, targetSize, targetSize);
+      const d = imgData.data;
+      const w = targetSize;
+      const h = targetSize;
+
+      // 1. Binary Grid with Smart Transparency & Luminance Detection
+      const binary = new Uint8Array(w * h);
+      const isTransparent = detectImageTransparency(sourceImgOrCanvas);
+
+      for (let i = 0; i < w * h; i++) {
+        const r = d[i * 4];
+        const g = d[i * 4 + 1];
+        const b = d[i * 4 + 2];
+        const a = d[i * 4 + 3];
+
+        if (isTransparent && state.preserveAlpha) {
+          binary[i] = a > 90 ? 1 : 0;
+        } else {
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          binary[i] = (a > 30 && lum < threshold) ? 1 : 0;
+        }
+      }
+
+      // 2. Moore-Neighbor Boundary Tracing
+      const visited = new Uint8Array(w * h);
+      const rawContours = [];
+      const dx = [0, 1, 1, 1, 0, -1, -1, -1];
+      const dy = [-1, -1, 0, 1, 1, 1, 0, -1];
+
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const idx = y * w + x;
+          if (binary[idx] === 1 && !visited[idx]) {
+            let isBorder = false;
+            for (let k = 0; k < 8; k++) {
+              if (binary[(y + dy[k]) * w + (x + dx[k])] === 0) {
+                isBorder = true;
+                break;
+              }
+            }
+
+            if (isBorder) {
+              const contour = [];
+              let cx = x, cy = y;
+              let dir = 0;
+              const startX = x, startY = y;
+              let maxIter = w * h;
+
+              while (maxIter-- > 0) {
+                contour.push({ x: cx, y: cy });
+                visited[cy * w + cx] = 1;
+
+                let foundNext = false;
+                let checkDir = (dir + 5) % 8;
+                for (let i = 0; i < 8; i++) {
+                  const nd = (checkDir + i) % 8;
+                  const nx = cx + dx[nd];
+                  const ny = cy + dy[nd];
+                  if (nx >= 0 && nx < w && ny >= 0 && ny < h && binary[ny * w + nx] === 1) {
+                    cx = nx;
+                    cy = ny;
+                    dir = nd;
+                    foundNext = true;
+                    break;
+                  }
+                }
+
+                if (!foundNext || (cx === startX && cy === startY && contour.length > 2)) {
+                  break;
+                }
+              }
+
+              if (contour.length >= 5) {
+                rawContours.push(contour);
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Ramer-Douglas-Peucker Polygon Simplification
+      function rdpSimplify(pts, eps) {
+        if (pts.length <= 2) return pts;
+        let dmax = 0;
+        let index = 0;
+        const end = pts.length - 1;
+        const x1 = pts[0].x, y1 = pts[0].y;
+        const x2 = pts[end].x, y2 = pts[end].y;
+        const lineDist = Math.hypot(x2 - x1, y2 - y1);
+
+        for (let i = 1; i < end; i++) {
+          let d;
+          if (lineDist === 0) {
+            d = Math.hypot(pts[i].x - x1, pts[i].y - y1);
+          } else {
+            d = Math.abs((y2 - y1) * pts[i].x - (x2 - x1) * pts[i].y + x2 * y1 - y2 * x1) / lineDist;
+          }
+          if (d > dmax) {
+            index = i;
+            dmax = d;
+          }
+        }
+
+        if (dmax > eps) {
+          const r1 = rdpSimplify(pts.slice(0, index + 1), eps);
+          const r2 = rdpSimplify(pts.slice(index), eps);
+          return r1.slice(0, -1).concat(r2);
+        } else {
+          return [pts[0], pts[end]];
+        }
+      }
+
+      // 4. Catmull-Rom to Cubic Bezier Curve Fitting
+      const pathChunks = [];
+      for (const rawC of rawContours) {
+        if (rawC.length < 5) continue;
+        const simplified = rdpSimplify(rawC, epsilon);
+        if (simplified.length < 3) continue;
+
+        const n = simplified.length;
+        let chunk = `M ${simplified[0].x.toFixed(1)} ${simplified[0].y.toFixed(1)}`;
+        const tension = 0.25;
+
+        for (let i = 0; i < n; i++) {
+          const p0 = simplified[(i - 1 + n) % n];
+          const p1 = simplified[i];
+          const p2 = simplified[(i + 1) % n];
+          const p3 = simplified[(i + 2) % n];
+
+          const cp1x = p1.x + (p2.x - p0.x) * tension;
+          const cp1y = p1.y + (p2.y - p0.y) * tension;
+          const cp2x = p2.x - (p3.x - p1.x) * tension;
+          const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+          chunk += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+        }
+        chunk += ' Z';
+        pathChunks.push(chunk);
+      }
+
+      if (pathChunks.length === 0) {
+        return null;
+      }
+
+      const compoundD = pathChunks.join(' ');
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+  <path d="${compoundD}" fill="${state.color}" fill-rule="evenodd" shape-rendering="geometricPrecision"/>
+</svg>`;
+    }
+
+    // Handle Custom Logo Upload (supporting SVG vectors, PNG, JPG, WebP with Auto-Vectorization)
+    function handleLogoFileUpload(file) {
+      if (!file) return;
+
+      const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+
+      if (isSvg) {
+        // Read SVG as text for pure native vector handling
         const textReader = new FileReader();
         textReader.onload = (e) => {
           const svgContent = e.target.result;
           state.isSvgVector = true;
           state.svgXml = svgContent;
           state.vectorizedSvgXml = null;
-          state.useVectorMode = false;
+          state.useVectorMode = true;
           state.customLogoSrc = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent);
           state.customLogoFileName = file.name;
           state.isCustomLogo = true;
@@ -1513,32 +1701,30 @@
           document.getElementById('activeLogoThumb').src = state.customLogoSrc;
           document.getElementById('activeLogoTitle').innerText = file.name;
           document.getElementById('btnResetLogo').style.display = 'inline-flex';
+          const chkVec = document.getElementById('chkVectorMode');
+          if (chkVec) chkVec.checked = true;
 
           const img = new Image();
           img.onload = () => {
             currentRawLogoImg = img;
             logoLoaded = true;
-            reprocessLogoMask(1200, 1200);
             updateStamp();
-            showToast('Vector SVG loaded! Rendering at 100% infinite clarity.');
+            showToast('✨ Native Vector SVG loaded with 100% infinite clarity!');
           };
           img.src = state.customLogoSrc;
         };
         textReader.readAsText(file);
       } else {
-        // Raster Image (PNG, JPG, WebP)
+        // Raster Image (PNG, JPG, WebP): Load and Automatically Vectorize!
         const reader = new FileReader();
         reader.onload = (e) => {
           const customImg = new Image();
           customImg.onload = () => {
             currentRawLogoImg = customImg;
-            state.isSvgVector = false;
-            state.svgXml = null;
-            state.vectorizedSvgXml = null;
-            state.useVectorMode = false;
             state.customLogoSrc = e.target.result;
             state.customLogoFileName = file.name;
             state.isCustomLogo = true;
+            logoLoaded = true;
 
             // Update UI
             document.getElementById('activeLogoThumb').src = e.target.result;
@@ -1546,9 +1732,26 @@
             document.getElementById('btnResetLogo').style.display = 'inline-flex';
 
             reprocessLogoMask(Math.max(customImg.width, 1024), Math.max(customImg.height, 1024));
-            renderLogoTint();
-            updateStamp();
-            showToast('High-resolution logo applied with smooth anti-aliasing!');
+
+            // Run Automatic In-Browser Bezier Vectorizer
+            const generatedVectorSvg = vectorizeImageToSvgString(customImg);
+            if (generatedVectorSvg) {
+              state.vectorizedSvgXml = generatedVectorSvg;
+              state.svgXml = generatedVectorSvg;
+              state.isSvgVector = true;
+              state.useVectorMode = true;
+              const chkVec = document.getElementById('chkVectorMode');
+              if (chkVec) chkVec.checked = true;
+              updateStamp();
+              showToast('⚡ Logo uploaded & auto-vectorized into smooth Bézier curves!');
+            } else {
+              state.isSvgVector = false;
+              state.useVectorMode = false;
+              const chkVec = document.getElementById('chkVectorMode');
+              if (chkVec) chkVec.checked = false;
+              updateStamp();
+              showToast('High-resolution raster logo loaded');
+            }
           };
           customImg.src = e.target.result;
         };
@@ -1556,72 +1759,40 @@
       }
     }
 
-    // In-Browser Auto-Vectorization (Image-to-Vector Converter)
+    // In-Browser Auto-Vectorization (Explicit Re-Vectorize Button)
     function autoVectorizeCurrentLogo() {
-      if (state.isSvgVector) {
-        showToast('Logo is already a native vector SVG!');
-        return;
-      }
       if (!logoLoaded || !currentRawLogoImg.complete) {
         showToast('Please wait for logo to load');
         return;
       }
 
-      showToast('Tracing logo into smooth vector paths...');
+      showToast('⚡ Tracing logo into smooth Bézier vector curves...');
 
       setTimeout(() => {
         try {
-          const w = 400;
-          const h = 400;
-          const vCanvas = document.createElement('canvas');
-          vCanvas.width = w;
-          vCanvas.height = h;
-          const vCtx = vCanvas.getContext('2d');
-          vCtx.drawImage(currentProcessedMaskCanvas, 0, 0, w, h);
-          const imgData = vCtx.getImageData(0, 0, w, h);
-          const d = imgData.data;
+          const source = currentRawLogoImg.src ? currentRawLogoImg : currentProcessedMaskCanvas;
+          const generatedSvg = vectorizeImageToSvgString(source, {
+            size: 600,
+            epsilon: state.vectorEpsilon || 1.2
+          });
 
-          // Build marching squares path
-          let pathD = '';
-          const step = 2;
-          for (let y = 0; y < h - step; y += step) {
-            let inShape = false;
-            let startX = 0;
-            for (let x = 0; x < w; x += step) {
-              const idx = (y * w + x) * 4;
-              const alpha = d[idx + 3];
-              const isDark = alpha > 120;
-
-              if (isDark && !inShape) {
-                inShape = true;
-                startX = x;
-              } else if (!isDark && inShape) {
-                inShape = false;
-                pathD += `M${startX},${y}h${x - startX}v${step}h${startX - x}z `;
-              }
-            }
-            if (inShape) {
-              pathD += `M${startX},${y}h${w - startX}v${step}h${startX - w}z `;
-            }
-          }
-
-          if (!pathD) {
-            showToast('Could not trace paths. Try adjusting the clean threshold.');
+          if (!generatedSvg) {
+            showToast('Could not trace vector paths. Try adjusting the clean threshold.');
             return;
           }
 
-          const generatedSvg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}">
-  <path d="${pathD}" fill="${state.color}" fill-rule="evenodd" shape-rendering="geometricPrecision"/>
-</svg>`;
-
           state.vectorizedSvgXml = generatedSvg;
+          state.svgXml = generatedSvg;
+          state.isSvgVector = true;
           state.useVectorMode = true;
+          const chkVec = document.getElementById('chkVectorMode');
+          if (chkVec) chkVec.checked = true;
+
           updateStamp();
-          showToast('⚡ Logo successfully converted to Vector SVG!');
+          showToast('⚡ Logo successfully vectorized with infinite clarity!');
         } catch (err) {
           console.error(err);
-          showToast('Vectorization completed with high-res anti-aliasing.');
+          showToast('Vectorization error. Using high-res mode.');
         }
       }, 50);
     }
@@ -1709,6 +1880,37 @@
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
           handleLogoFileUpload(e.dataTransfer.files[0]);
         }
+      });
+
+      // Vector SVG Mode Toggle
+      const chkVectorMode = document.getElementById('chkVectorMode');
+      if (chkVectorMode) {
+        chkVectorMode.addEventListener('change', (e) => {
+          state.useVectorMode = e.target.checked;
+          state.isSvgVector = e.target.checked;
+          if (state.useVectorMode && !state.svgXml && currentRawLogoImg.complete) {
+            autoVectorizeCurrentLogo();
+          } else {
+            updateStamp();
+          }
+        });
+      }
+
+      // Vector Curve Smoothing Slider
+      setupSlider('vectorSmoothRange', 'vectorSmoothVal', 'px', (v) => {
+        state.vectorEpsilon = v / 10;
+        if (state.useVectorMode && currentRawLogoImg.complete) {
+          const generatedSvg = vectorizeImageToSvgString(currentRawLogoImg, {
+            size: 600,
+            epsilon: state.vectorEpsilon
+          });
+          if (generatedSvg) {
+            state.vectorizedSvgXml = generatedSvg;
+            state.svgXml = generatedSvg;
+            updateStamp();
+          }
+        }
+        return `${(v / 10).toFixed(1)}px`;
       });
 
       // Auto-Tint Toggle
