@@ -1506,13 +1506,6 @@
       slot.appendChild(clone);
     }
 
-    // Handle Custom Logo Upload (supporting SVG vectors, PNG, JPG, WebP)
-    function handleLogoFileUpload(file) {
-      if (!file) return;
-
-      const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
-
-      if (isSvg) {
     // High-Precision Moore-Neighbor Contour Tracer & Smooth Bezier Curve Vectorizer
     function vectorizeImageToSvgString(sourceImgOrCanvas, options = {}) {
       const targetSize = options.size || 512;
