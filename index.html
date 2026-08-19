@@ -1266,46 +1266,118 @@
       }
     }
 
-    // Helper to get sanitized SVG data URL with desired ink color & resolution
+    // Helper to get sanitized, valid SVG data URL with desired ink color & resolution
     function getTintedSvgDataUrl(svgString, color, width, height) {
       if (!svgString) return null;
-      let cleaned = svgString;
+      try {
+        const cleaned = svgString.replace(/<\?xml[^>]*\?>/i, '').trim();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(cleaned, 'image/svg+xml');
+        const svgEl = doc.querySelector('svg');
+        if (!svgEl) return null;
 
-      // Extract viewBox or create one
-      if (!cleaned.includes('viewBox')) {
-        const wMatch = cleaned.match(/width=["']?([0-9.]+)/i);
-        const hMatch = cleaned.match(/height=["']?([0-9.]+)/i);
-        const vw = wMatch ? wMatch[1] : (width || 500);
-        const vh = hMatch ? hMatch[1] : (height || 500);
-        cleaned = cleaned.replace(/<svg\b/i, `<svg viewBox="0 0 ${vw} ${vh}" `);
+        if (!svgEl.hasAttribute('viewBox')) {
+          const w = svgEl.getAttribute('width') || width || 1024;
+          const h = svgEl.getAttribute('height') || height || 1024;
+          svgEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        }
+
+        svgEl.setAttribute('width', width || 1024);
+        svgEl.setAttribute('height', height || 1024);
+
+        if (state.autoTint) {
+          svgEl.setAttribute('fill', color);
+          svgEl.setAttribute('color', color);
+          svgEl.style.color = color;
+          svgEl.querySelectorAll('path, polygon, polyline, circle, rect, ellipse').forEach(el => {
+            const fill = el.getAttribute('fill');
+            if (fill !== 'none') {
+              el.setAttribute('fill', color);
+            }
+            const stroke = el.getAttribute('stroke');
+            if (stroke && stroke !== 'none') {
+              el.setAttribute('stroke', color);
+            }
+          });
+        }
+
+        const serializer = new XMLSerializer();
+        const finalSvg = serializer.serializeToString(svgEl);
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(finalSvg);
+      } catch (e) {
+        console.error('Error tinting SVG', e);
+        return null;
       }
+    }
 
-      // Ensure explicit width and height on root <svg>
-      cleaned = cleaned.replace(/<svg([^>]*?)(\s+width=["'][^"']*["'])?/i, (m, rest) => {
-        return `<svg${rest} width="${width || 1024}" height="${height || 1024}"`;
-      });
+    // Render Tinted Logo (Direct Pure Vector SVG into DOM when in vector mode)
+    function renderLogoTint() {
+      if (!logoLoaded) return;
+      const logoWrap = document.getElementById('logoWrap');
+      if (!logoWrap) return;
 
-      if (state.autoTint) {
-        // Remove white or near-white background rects
-        cleaned = cleaned.replace(/<rect[^>]*fill=["']?(#fff|#ffffff|white|rgb\(255,255,255\))["']?[^>]*\/?>(<\/rect>)?/gi, '');
-        // Replace currentColor or generic dark fills/strokes with stamp ink color
-        cleaned = cleaned.replace(/fill=["']?(#000|#000000|black|currentColor|rgb\(0,0,0\))["']?/gi, `fill="${color}"`);
-        cleaned = cleaned.replace(/stroke=["']?(#000|#000000|black|currentColor|rgb\(0,0,0\))["']?/gi, `stroke="${color}"`);
-        // Wrap elements inside a styled group if needed
-        if (!cleaned.includes('fill="')) {
-          cleaned = cleaned.replace(/<svg([^>]*)>/i, `<svg$1 fill="${color}" color="${color}">`);
+      const activeSvg = state.isSvgVector ? state.svgXml : (state.useVectorMode ? state.vectorizedSvgXml : null);
+
+      if (activeSvg) {
+        // 100% PURE INLINE VECTOR SVG IN THE DOM FOR ZERO PIXELATION
+        try {
+          const cleaned = activeSvg.replace(/<\?xml[^>]*\?>/i, '').trim();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(cleaned, 'image/svg+xml');
+          const svgEl = doc.querySelector('svg');
+
+          if (svgEl) {
+            svgEl.setAttribute('width', state.logoSize);
+            svgEl.setAttribute('height', state.logoSize);
+            svgEl.style.width = state.logoSize + 'px';
+            svgEl.style.height = state.logoSize + 'px';
+            svgEl.style.display = 'block';
+            svgEl.style.shapeRendering = 'geometricPrecision';
+
+            if (state.logoShape === 'logo-shape-circle') {
+              svgEl.style.borderRadius = '50%';
+              svgEl.style.overflow = 'hidden';
+            } else if (state.logoShape === 'logo-shape-rounded') {
+              svgEl.style.borderRadius = (state.logoSize * 0.16) + 'px';
+              svgEl.style.overflow = 'hidden';
+            } else {
+              svgEl.style.borderRadius = '0';
+              svgEl.style.overflow = 'visible';
+            }
+
+            if (state.autoTint) {
+              svgEl.setAttribute('fill', state.color);
+              svgEl.setAttribute('color', state.color);
+              svgEl.style.color = state.color;
+              svgEl.querySelectorAll('path, polygon, polyline, circle, rect, ellipse').forEach(el => {
+                const fill = el.getAttribute('fill');
+                if (fill !== 'none') {
+                  el.setAttribute('fill', state.color);
+                }
+                const stroke = el.getAttribute('stroke');
+                if (stroke && stroke !== 'none') {
+                  el.setAttribute('stroke', state.color);
+                }
+              });
+            }
+
+            logoWrap.innerHTML = '';
+            logoWrap.appendChild(svgEl);
+            return;
+          }
+        } catch (e) {
+          console.error('Direct vector DOM render failed', e);
         }
       }
 
-      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(cleaned);
-    }
+      // Raster mode on canvas
+      let canvas = logoWrap.querySelector('canvas');
+      if (!canvas) {
+        logoWrap.innerHTML = '<canvas id="logoTintCanvas"></canvas>';
+        canvas = logoWrap.querySelector('canvas');
+      }
 
-    // Render Tinted Logo on live canvas with crisp anti-aliased scaling
-    function renderLogoTint() {
-      if (!logoLoaded) return;
-      const canvas = document.getElementById('logoTintCanvas');
       const ctx = canvas.getContext('2d');
-
       const size = state.logoSize * 3; // 3x Super-Sampling for Retina display
       canvas.width = size;
       canvas.height = size;
@@ -1317,7 +1389,7 @@
       ctx.clearRect(0, 0, size, size);
       ctx.save();
 
-      // Apply shape clipping (e.g. circle or rounded)
+      // Apply shape clipping
       if (state.logoShape === 'logo-shape-circle') {
         ctx.beginPath();
         ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
@@ -1328,31 +1400,13 @@
         ctx.clip();
       }
 
-      const activeSvg = state.isSvgVector ? state.svgXml : (state.useVectorMode ? state.vectorizedSvgXml : null);
-
-      if (activeSvg) {
-        // True Vector SVG Rendering at exact target DPI
-        const svgUrl = getTintedSvgDataUrl(activeSvg, state.color, size, size);
-        const svgImg = new Image();
-        svgImg.onload = () => {
-          ctx.drawImage(svgImg, 0, 0, size, size);
-          ctx.restore();
-        };
-        svgImg.src = svgUrl;
-        return;
-      }
-
       if (state.autoTint) {
-        // Draw high-resolution anti-aliased mask
         ctx.drawImage(currentProcessedMaskCanvas, 0, 0, size, size);
-
-        // Tint using source-in
         ctx.globalCompositeOperation = 'source-in';
         ctx.fillStyle = state.color;
         ctx.fillRect(0, 0, size, size);
         ctx.globalCompositeOperation = 'source-over';
       } else {
-        // Original multi-color mode
         ctx.drawImage(currentRawLogoImg, 0, 0, size, size);
       }
 
@@ -1434,13 +1488,6 @@
       const clone = document.getElementById('stampElement').cloneNode(true);
       clone.style.transform = `rotate(${state.tilt - 3}deg) scale(0.85)`;
       slot.appendChild(clone);
-      // Re-draw canvas on clone
-      const cloneCanvas = clone.querySelector('canvas');
-      if (cloneCanvas) {
-        const ctx = cloneCanvas.getContext('2d');
-        const origCanvas = document.getElementById('logoTintCanvas');
-        ctx.drawImage(origCanvas, 0, 0);
-      }
     }
 
     // Handle Custom Logo Upload (supporting SVG vectors, PNG, JPG, WebP)
